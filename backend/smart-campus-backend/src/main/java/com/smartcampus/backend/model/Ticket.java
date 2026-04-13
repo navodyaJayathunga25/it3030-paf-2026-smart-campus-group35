@@ -1,5 +1,22 @@
 package com.smartcampus.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Document(collection = "tickets")
 public class Ticket {
 
@@ -12,6 +29,7 @@ public class Ticket {
     private String resourceId;
     private String resourceName;
 
+    private String category;
 
     @Builder.Default
     private Priority priority = Priority.MEDIUM;
@@ -22,6 +40,9 @@ public class Ticket {
     private String reportedBy;
     private String reportedByName;
 
+    private String assignedTo;
+    private String assignedToName;
+
     private String contactDetails;
 
     @Builder.Default
@@ -29,6 +50,9 @@ public class Ticket {
 
     private String resolutionNotes;
     private String reason;
+
+    @CreatedDate
+    private Instant createdAt;
 
     @LastModifiedDate
     private Instant updatedAt;
