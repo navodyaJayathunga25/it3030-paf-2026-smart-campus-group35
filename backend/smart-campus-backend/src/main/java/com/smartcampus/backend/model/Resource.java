@@ -9,11 +9,14 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
-
+@NoArgsConstructor
+@AllArgsConstructor
 @Document(collection = "resources")
 public class Resource {
 
@@ -36,4 +39,17 @@ public class Resource {
 
     private String description;
 
+    @CreatedDate
+    private Instant createdAt;
+
+    @LastModifiedDate
+    private Instant updatedAt;
+
+    public enum ResourceType {
+        LECTURE_HALL, LAB, MEETING_ROOM, EQUIPMENT, AUDITORIUM, LIBRARY_ROOM
+    }
+
+    public enum ResourceStatus {
+        ACTIVE, OUT_OF_SERVICE, UNDER_MAINTENANCE
+    }
 }
