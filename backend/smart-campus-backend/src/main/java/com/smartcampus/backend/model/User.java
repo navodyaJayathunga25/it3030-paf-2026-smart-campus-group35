@@ -1,16 +1,16 @@
-package com.smartcampus.model;
+package com.smartcampus.backend.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -27,29 +27,23 @@ public class User {
     @Indexed(unique = true)
     private String email;
 
-    private String password;
+    private String picture;
 
-    @Builder.Default
-    private Role role = Role.USER;
-
-    private String avatar;
-
-    @Builder.Default
-    private Provider provider = Provider.LOCAL;
+    private String provider; // google, local
 
     private String providerId;
 
+    private String department;
+
+    @Builder.Default
+    private UserRole role = UserRole.USER;
+
+    @Builder.Default
+    private boolean active = true;
+
     @CreatedDate
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
     @LastModifiedDate
-    private Instant updatedAt;
-
-    public enum Role {
-        USER, ADMIN, TECHNICIAN
-    }
-
-    public enum Provider {
-        LOCAL, GOOGLE
-    }
+    private LocalDateTime updatedAt;
 }
