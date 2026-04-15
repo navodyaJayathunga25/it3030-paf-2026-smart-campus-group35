@@ -1,6 +1,6 @@
-package com.smartcampus.dto;
+package com.smartcampus.backend.dto;
 
-import com.smartcampus.model.Ticket;
+import com.smartcampus.backend.model.Ticket.TicketStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -8,9 +8,8 @@ import lombok.Data;
 public class TicketStatusRequest {
 
     @NotNull(message = "Status is required")
-    private Ticket.TicketStatus status;
+    private TicketStatus status;
 
-    private String reason;
-    private String assignedTo;
-    private String resolutionNotes;
+    private String notes;
 }
+
