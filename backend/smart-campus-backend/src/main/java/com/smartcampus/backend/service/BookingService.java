@@ -86,4 +86,70 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
+    public Booking approveBooking(String bookingId, User admin) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new IllegalArgumentException("Only pending bookings can be approved");
+        }
+
+        booking.setStatus(BookingStatus.APPROVED);
+        booking.setApprovedBy(admin.getId());
+        Booking saved = bookingRepository.save(booking);
+
+        notificationService.sendNotification(
+            booking.getUserId(),
+            NotificationType.BOOKING,
+            "Booking Approved",
+            "Your booking for " + booking.getResourceName() + " on " + booking.getDate() + " has been approved.",
+            booking.getId(),
+            "/bookings/" + booking.getId()
+        );
+
+        return saved;
+    }
+
+    public Booking rejectBooking(String bookingId, String reason, User admin) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new IllegalArgumentException("Only pending bookings can be rejected");
+        }
+
+        booking.setStatus(BookingStatus.REJECTED);
+        booking.setRejectionReason(reason);
+        booking.setApprovedBy(admin.getId());
+        Booking saved = bookingRepository.save(booking);
+
+        notificationService.sendNotification(
+            booking.getUserId(),
+            NotificationType.BOOKING,
+            "Booking Rejected",
+            "Your booking for " + booking.getResourceName() + " on " + booking.getDate() + " was rejected. Reason: " + reason,
+            booking.getId(),
+            "/bookings/" + booking.getId()
+        );
+
+        return saved;
+    }
+
+    public Booking cancelBooking(String bookingId, User currentUser) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (!booking.getUserId().equals(currentUser.getId()) &&
+            !currentUser.getRole().name().equals("ADMIN")) {
+            throw new UnauthorizedException("You can only cancel your own bookings");
+        }
+
+        if (booking.getStatus() == BookingStatus.CANCELLED ||
+            booking.getStatus() == BookingStatus.REJECTED) {
+            throw new IllegalArgumentException("Booking is already " + booking.getStatus().name().toLowerCase());
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        return bookingRepository.save(booking);
+    }
 }
