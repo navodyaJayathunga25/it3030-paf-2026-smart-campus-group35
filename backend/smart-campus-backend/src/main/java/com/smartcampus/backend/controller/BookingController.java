@@ -1,76 +1,96 @@
-package com.smartcampus.controller;
+package com.smartcampus.backend.controller;
 
-import com.smartcampus.dto.BookingRequest;
-import com.smartcampus.dto.BookingStatusRequest;
-import com.smartcampus.model.Booking;
-import com.smartcampus.model.User;
-import com.smartcampus.repository.UserRepository;
-import com.smartcampus.service.BookingService;
+import com.smartcampus.backend.dto.request.BookingRequest;
+import com.smartcampus.backend.dto.request.ReviewRequest;
+import com.smartcampus.backend.dto.response.ApiResponse;
+import com.smartcampus.backend.model.Booking;
+import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/bookings")
+@RequestMapping("/api/bookings")
 @RequiredArgsConstructor
 public class BookingController {
 
     private final BookingService bookingService;
-    private final UserRepository userRepository;
 
-    private User resolveUser(UserDetails userDetails) {
-        return userRepository.findById(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-    }
-
+    /**
+     * GET /api/bookings - List bookings (USER: own, ADMIN: all)
+     */
     @GetMapping
-    public ResponseEntity<List<Booking>> getBookings(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) String status) {
-        User user = resolveUser(userDetails);
-        return ResponseEntity.ok(bookingService.getBookings(user.getId(), user.getRole(), status));
+    public ResponseEntity<ApiResponse<List<Booking>>> getBookings(
+        @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(ApiResponse.success(bookingService.getBookingsForUser(currentUser)));
     }
 
+    /**
+     * GET /api/bookings/{id} - Get booking by ID
+     */
     @GetMapping("/{id}")
-    public ResponseEntity<Booking> getBookingById(
-            @PathVariable String id,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        User user = resolveUser(userDetails);
-        return ResponseEntity.ok(bookingService.getBookingById(id, user.getId(), user.getRole()));
+    public ResponseEntity<ApiResponse<Booking>> getBookingById(
+        @PathVariable String id,
+        @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(ApiResponse.success(bookingService.getBookingById(id, currentUser)));
     }
 
+    /**
+     * POST /api/bookings - Create a new booking
+     */
     @PostMapping
-    public ResponseEntity<Booking> createBooking(
-            @Valid @RequestBody BookingRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        User user = resolveUser(userDetails);
-        Booking booking = bookingService.createBooking(request, user.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(booking);
+    public ResponseEntity<ApiResponse<Booking>> createBooking(
+        @Valid @RequestBody BookingRequest request,
+        @AuthenticationPrincipal User currentUser) {
+        Booking booking = bookingService.createBooking(request, currentUser);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.success("Booking request submitted successfully", booking));
     }
 
-    @PutMapping("/{id}/status")
+    /**
+     * PUT /api/bookings/{id}/approve - Approve booking (ADMIN only)
+     */
+    @PutMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Booking> updateBookingStatus(
-            @PathVariable String id,
-            @Valid @RequestBody BookingStatusRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        User user = resolveUser(userDetails);
-        return ResponseEntity.ok(bookingService.updateBookingStatus(id, request, user.getId()));
+    public ResponseEntity<ApiResponse<Booking>> approveBooking(
+        @PathVariable String id,
+        @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(
+            ApiResponse.success("Booking approved", bookingService.approveBooking(id, currentUser))
+        );
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelBooking(
-            @PathVariable String id,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        User user = resolveUser(userDetails);
-        bookingService.cancelBooking(id, user.getId(), user.getRole());
-        return ResponseEntity.noContent().build();
+    /**
+     * PUT /api/bookings/{id}/reject - Reject booking (ADMIN only)
+     */
+    @PutMapping("/{id}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Booking>> rejectBooking(
+        @PathVariable String id,
+        @RequestBody ReviewRequest request,
+        @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(
+            ApiResponse.success("Booking rejected", bookingService.rejectBooking(id, request.getReason(), currentUser))
+        );
+    }
+
+    /**
+     * PUT /api/bookings/{id}/cancel - Cancel booking
+     */
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<Booking>> cancelBooking(
+        @PathVariable String id,
+        @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(
+            ApiResponse.success("Booking cancelled", bookingService.cancelBooking(id, currentUser))
+        );
     }
 }
+
