@@ -1,12 +1,11 @@
-package com.smartcampus.dto;
+package com.smartcampus.backend.dto;
 
-import com.smartcampus.model.Resource;
-import jakarta.validation.constraints.Min;
+import com.smartcampus.backend.model.Resource.ResourceStatus;
+import com.smartcampus.backend.model.Resource.ResourceType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -16,10 +15,24 @@ public class ResourceRequest {
     private String name;
 
     @NotNull(message = "Type is required")
-    private Resource.ResourceType type;
+    private ResourceType type;
 
-    @Min(value = 1, message = "Capacity must be at least 1")
-    private int capacity;
+    private Integer capacity;
 
+    @NotBlank(message = "Location is required")
+    private String location;
 
+    @NotBlank(message = "Building is required")
+    private String building;
+
+    private String floor;
+
+    private String description;
+
+    private ResourceStatus status = ResourceStatus.ACTIVE;
+
+    private List<String> amenities;
+
+    private String availabilityWindows;
 }
+
