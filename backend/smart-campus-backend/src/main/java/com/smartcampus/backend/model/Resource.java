@@ -1,16 +1,15 @@
-package com.smartcampus.model;
+package com.smartcampus.backend.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.Instant;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -27,29 +26,37 @@ public class Resource {
 
     private ResourceType type;
 
-    private int capacity;
+    private Integer capacity;
 
     private String location;
+
+    private String building;
+
+    private String floor;
+
+    private String description;
 
     @Builder.Default
     private ResourceStatus status = ResourceStatus.ACTIVE;
 
-    @Builder.Default
-    private List<String> availabilityWindows = new ArrayList<>();
+    private List<String> amenities;
 
-    private String description;
+    private String availabilityWindows;
+
+    private String imageUrl;
 
     @CreatedDate
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
     @LastModifiedDate
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
 
     public enum ResourceType {
-        LECTURE_HALL, LAB, MEETING_ROOM, EQUIPMENT, AUDITORIUM, LIBRARY_ROOM
+        LECTURE_HALL, LAB, MEETING_ROOM, EQUIPMENT
     }
 
     public enum ResourceStatus {
-        ACTIVE, OUT_OF_SERVICE, UNDER_MAINTENANCE
+        ACTIVE, OUT_OF_SERVICE
     }
 }
+
