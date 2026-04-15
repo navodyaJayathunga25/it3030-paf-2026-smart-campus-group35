@@ -42,4 +42,48 @@ public class BookingService {
         }
         return booking;
     }
+
+    public Booking createBooking(BookingRequest request, User currentUser) {
+        Resource resource = resourceRepository.findById(request.getResourceId())
+            .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", request.getResourceId()));
+
+        if (resource.getStatus() == Resource.ResourceStatus.OUT_OF_SERVICE) {
+            throw new IllegalArgumentException("Resource is currently out of service");
+        }
+
+        // Validate time range
+        if (!request.getEndTime().isAfter(request.getStartTime())) {
+            throw new IllegalArgumentException("End time must be after start time");
+        }
+
+        // Check for conflicts (OWASP A01: business logic validation)
+        List<Booking> conflicts = bookingRepository.findConflictingBookings(
+            resource.getId(),
+            request.getDate(),
+            request.getStartTime(),
+            request.getEndTime()
+        );
+
+        if (!conflicts.isEmpty()) {
+            throw new BookingConflictException(
+                "This resource is already booked during the requested time slot"
+            );
+        }
+
+        Booking booking = Booking.builder()
+            .userId(currentUser.getId())
+            .userName(currentUser.getName())
+            .resourceId(resource.getId())
+            .resourceName(resource.getName())
+            .date(request.getDate())
+            .startTime(request.getStartTime())
+            .endTime(request.getEndTime())
+            .purpose(request.getPurpose())
+            .expectedAttendees(request.getExpectedAttendees())
+            .status(BookingStatus.PENDING)
+            .build();
+
+        return bookingRepository.save(booking);
+    }
+
 }
