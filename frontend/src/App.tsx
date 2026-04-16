@@ -6,31 +6,31 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 // Public pages
-//import Landing from './pages/Landing';
-//import Login from './pages/Login';
-//import Register from './pages/Register';
-//import AuthCallback from './pages/AuthCallback';
-//import AuthError from './pages/AuthError';
+import Landing from './pages/Landing';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import AuthCallback from './pages/AuthCallback';
+import AuthError from './pages/AuthError';
 
 // User pages
-//import Dashboard from './pages/Dashboard';
-//import Facilities from './pages/Facilities';
-//import ResourceDetail from './pages/ResourceDetail';
-//import Bookings from './pages/Bookings';
-//import BookingDetail from './pages/BookingDetail';
-//import BookingCreate from './pages/BookingCreate';
-//import Tickets from './pages/Tickets';
-//import TicketDetail from './pages/TicketDetail';
-//import TicketCreate from './pages/TicketCreate';
-//import Notifications from './pages/Notifications';
-//import Profile from './pages/Profile';
+import Dashboard from './pages/Dashboard';
+import Facilities from './pages/Facilities';
+import ResourceDetail from './pages/ResourceDetail';
+import Bookings from './pages/Bookings';
+import BookingDetail from './pages/BookingDetail';
+import BookingCreate from './pages/BookingCreate';
+import Tickets from './pages/Tickets';
+import TicketDetail from './pages/TicketDetail';
+import TicketCreate from './pages/TicketCreate';
+import Notifications from './pages/Notifications';
+import Profile from './pages/Profile';
 
 // Admin pages
-//import Admin from './pages/Admin';
-//import AdminBookings from './pages/AdminBookings';
-//import AdminTickets from './pages/AdminTickets';
-//import AdminResources from './pages/AdminResources';
-//import AdminUsers from './pages/AdminUsers';
+import Admin from './pages/Admin';
+import AdminBookings from './pages/AdminBookings';
+import AdminTickets from './pages/AdminTickets';
+import AdminResources from './pages/AdminResources';
+import AdminUsers from './pages/AdminUsers';
 
 // Technician pages
 import MyAssignedTickets from './pages/MyAssignedTickets';
