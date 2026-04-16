@@ -18,7 +18,13 @@ export interface User {
 
 export interface Resource {
   id: string;
-
+  name: string;
+  type: ResourceType;
+  capacity?: number;
+  location: string;
+  building: string;
+  floor: string;
+  status: ResourceStatus;
   description: string;
   amenities: string[];
   availabilityWindows: string;
@@ -41,6 +47,27 @@ export interface Booking {
   createdAt: string;
 }
 
+export interface Ticket {
+  id: string;
+  resourceId?: string;
+  resourceName?: string;
+  location: string;
+  userId: string;
+  userName: string;
+  category: string;
+  description: string;
+  priority: TicketPriority;
+  status: TicketStatus;
+  assignedTo?: string;
+  assignedToName?: string;
+  contactEmail: string;
+  contactPhone?: string;
+  images: string[];
+  resolutionNotes?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Comment {
   id: string;
@@ -73,6 +100,8 @@ export const mockUsers: User[] = [
   { id: "u6", name: "Anna Tech", email: "anna@campus.edu", role: "TECHNICIAN", department: "IT Support" },
 ];
 
+// Current logged-in user (simulated)
+export const currentUser: User = mockUsers[0];
 
 // ============ MOCK RESOURCES ============
 export const mockResources: Resource[] = [
@@ -90,7 +119,13 @@ export const mockResources: Resource[] = [
     amenities: ["Projector", "Whiteboard", "Air Conditioning", "Wi-Fi"],
     availabilityWindows: "Mon-Fri 8:00-21:00",
   },
-
+  {
+    id: "r3", name: "Physics Lab 101", type: "LAB", capacity: 30,
+    location: "Science Block, 1st Floor", building: "Science Block", floor: "1st",
+    status: "ACTIVE", description: "Fully equipped physics laboratory with experiment stations and safety equipment.",
+    amenities: ["Lab Equipment", "Safety Gear", "Fume Hood", "Wi-Fi"],
+    availabilityWindows: "Mon-Fri 9:00-17:00",
+  },
   {
     id: "r4", name: "Computer Lab C-301", type: "LAB", capacity: 40,
     location: "Building C, 3rd Floor", building: "Building C", floor: "3rd",
@@ -209,7 +244,15 @@ export const mockBookings: Booking[] = [
   },
 ];
 
-
+// ============ MOCK TICKETS ============
+export const mockTickets: Ticket[] = [
+  {
+    id: "t1", resourceId: "r1", resourceName: "Main Auditorium", location: "Building A, Ground Floor",
+    userId: "u1", userName: "John Student", category: "AV Equipment", description: "The main projector in the auditorium is displaying a flickering image. The issue started during yesterday's lecture and has been persistent.",
+    priority: "HIGH", status: "IN_PROGRESS", assignedTo: "u3", assignedToName: "Mike Technician",
+    contactEmail: "john@campus.edu", contactPhone: "+94 77 123 4567",
+    images: [], createdAt: "2026-04-10T09:15:00Z", updatedAt: "2026-04-11T14:30:00Z",
+  },
   {
     id: "t2", resourceId: "r4", resourceName: "Computer Lab C-301", location: "Building C, 3rd Floor",
     userId: "u4", userName: "Emily Researcher", category: "IT Infrastructure", description: "5 workstations in the back row are not connecting to the university network. Students cannot access online resources.",
@@ -238,7 +281,15 @@ export const mockBookings: Booking[] = [
   },
 ];
 
-
+// ============ MOCK COMMENTS ============
+export const mockComments: Comment[] = [
+  { id: "c1", ticketId: "t1", userId: "u1", userName: "John Student", userRole: "USER", content: "The flickering seems to get worse when the projector has been running for more than 30 minutes.", createdAt: "2026-04-10T10:00:00Z" },
+  { id: "c2", ticketId: "t1", userId: "u3", userName: "Mike Technician", userRole: "TECHNICIAN", content: "I've inspected the projector. It appears to be a lamp issue. Ordering a replacement lamp now.", createdAt: "2026-04-11T14:30:00Z" },
+  { id: "c3", ticketId: "t1", userId: "u2", userName: "Dr. Sarah Admin", userRole: "ADMIN", content: "Please prioritize this as we have a major event next week.", createdAt: "2026-04-11T15:00:00Z" },
+  { id: "c4", ticketId: "t3", userId: "u6", userName: "Anna Tech", userRole: "TECHNICIAN", content: "Replaced all faulty tubes. Please confirm if the issue is resolved.", createdAt: "2026-04-10T10:00:00Z" },
+  { id: "c5", ticketId: "t3", userId: "u5", userName: "David Lecturer", userRole: "USER", content: "Confirmed! All lights are working now. Thank you!", createdAt: "2026-04-10T11:30:00Z" },
+  { id: "c6", ticketId: "t5", userId: "u3", userName: "Mike Technician", userRole: "TECHNICIAN", content: "Elevator maintenance team has been scheduled for tomorrow morning.", createdAt: "2026-04-06T09:00:00Z" },
+];
 
 // ============ MOCK NOTIFICATIONS ============
 export const mockNotifications: Notification[] = [
