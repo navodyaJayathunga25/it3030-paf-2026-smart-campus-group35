@@ -8,7 +8,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
 
@@ -16,30 +15,19 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "users")
-public class User {
+@Document(collection = "comments")
+public class Comment {
 
     @Id
     private String id;
 
-    private String name;
+    private String ticketId;
 
-    @Indexed(unique = true)
-    private String email;
+    private String userId;
+    private String userName;
+    private String userRole;
 
-    private String picture;
-
-    private String provider; // google, local
-
-    private String providerId;
-
-    private String department;
-
-    @Builder.Default
-    private UserRole role = UserRole.USER;
-
-    @Builder.Default
-    private boolean active = true;
+    private String content;
 
     @CreatedDate
     private LocalDateTime createdAt;
@@ -47,3 +35,4 @@ public class User {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 }
+

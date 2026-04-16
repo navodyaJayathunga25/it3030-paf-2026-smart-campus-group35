@@ -8,42 +8,55 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "users")
-public class User {
+@Document(collection = "resources")
+public class Resource {
 
     @Id
     private String id;
 
     private String name;
 
-    @Indexed(unique = true)
-    private String email;
+    private ResourceType type;
 
-    private String picture;
+    private Integer capacity;
 
-    private String provider; // google, local
+    private String location;
 
-    private String providerId;
+    private String building;
 
-    private String department;
+    private String floor;
 
-    @Builder.Default
-    private UserRole role = UserRole.USER;
+    private String description;
 
     @Builder.Default
-    private boolean active = true;
+    private ResourceStatus status = ResourceStatus.ACTIVE;
+
+    private List<String> amenities;
+
+    private String availabilityWindows;
+
+    private String imageUrl;
 
     @CreatedDate
     private LocalDateTime createdAt;
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    public enum ResourceType {
+        LECTURE_HALL, LAB, MEETING_ROOM, EQUIPMENT
+    }
+
+    public enum ResourceStatus {
+        ACTIVE, OUT_OF_SERVICE
+    }
 }
+

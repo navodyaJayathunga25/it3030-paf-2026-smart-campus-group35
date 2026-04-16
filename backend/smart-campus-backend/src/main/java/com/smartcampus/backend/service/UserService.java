@@ -1,77 +1,59 @@
-package com.smartcampus.service;
+package com.smartcampus.backend.service;
 
-import com.smartcampus.dto.AuthResponse;
-import com.smartcampus.dto.LoginRequest;
-import com.smartcampus.dto.RegisterRequest;
-import com.smartcampus.exception.ResourceNotFoundException;
-import com.smartcampus.model.User;
-import com.smartcampus.repository.UserRepository;
+import com.smartcampus.backend.dto.response.UserResponse;
+import com.smartcampus.backend.exception.ResourceNotFoundException;
+import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.model.UserRole;
+import com.smartcampus.backend.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-@Slf4j
-
+@Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
 
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already registered: " + request.getEmail());
-        }
-
-        User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(User.Role.USER)
-                .provider(User.Provider.LOCAL)
-                .build();
-
-        user = userRepository.save(user);
-        String token = jwtService.generateToken(user);
-
-        return AuthResponse.builder()
-                .token(token)
-                .user(AuthResponse.toUserDto(user))
-                .build();
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+            .map(this::toResponse)
+            .collect(Collectors.toList());
     }
 
-    public AuthResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        // We need to authenticate by userId but manager uses username
-                        // So we look up user first to get the userId used as username
-                        findUserIdByEmail(request.getEmail()),
-                        request.getPassword()
-                )
-        );
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        String token = jwtService.generateToken(user);
-
-        return AuthResponse.builder()
-                .token(token)
-                .user(AuthResponse.toUserDto(user))
-                .build();
+    public UserResponse getUserById(String id) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+        return toResponse(user);
     }
 
-    private String findUserIdByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .map(User::getId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
-    }
-
-
-    public User updateUserRole(String userId, User.Role role) {
-        User user = getUserById(userId);
+    public UserResponse updateUserRole(String userId, UserRole role) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         user.setRole(role);
-        return userRepository.save(user);
+        return toResponse(userRepository.save(user));
+    }
+
+    public UserResponse updateUserStatus(String userId, boolean active) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        user.setActive(active);
+        return toResponse(userRepository.save(user));
+    }
+
+    public UserResponse toResponse(User user) {
+        return UserResponse.builder()
+            .id(user.getId())
+            .name(user.getName())
+            .email(user.getEmail())
+            .picture(user.getPicture())
+            .department(user.getDepartment())
+            .role(user.getRole())
+            .active(user.isActive())
+            .createdAt(user.getCreatedAt())
+            .build();
     }
 }
+
