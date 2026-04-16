@@ -1,10 +1,10 @@
 package com.smartcampus.backend.controller;
 
-import com.smartcampus.backend.dto.CommentRequest;
-import com.smartcampus.backend.dto.ReviewRequest;
-import com.smartcampus.backend.dto.TicketRequest;
-import com.smartcampus.backend.dto.TicketStatusRequest;
-import com.smartcampus.backend.dto.ApiResponse;
+import com.smartcampus.backend.dto.request.CommentRequest;
+import com.smartcampus.backend.dto.request.ReviewRequest;
+import com.smartcampus.backend.dto.request.TicketRequest;
+import com.smartcampus.backend.dto.request.TicketStatusRequest;
+import com.smartcampus.backend.dto.response.ApiResponse;
 import com.smartcampus.backend.model.Comment;
 import com.smartcampus.backend.model.Ticket;
 import com.smartcampus.backend.model.User;

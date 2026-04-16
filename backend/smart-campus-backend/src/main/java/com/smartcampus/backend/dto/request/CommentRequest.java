@@ -1,4 +1,4 @@
-package com.smartcampus.backend.dto;
+package com.smartcampus.backend.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

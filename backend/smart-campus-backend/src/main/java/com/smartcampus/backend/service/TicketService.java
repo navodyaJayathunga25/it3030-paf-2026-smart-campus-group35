@@ -1,8 +1,8 @@
 package com.smartcampus.backend.service;
 
-import com.smartcampus.backend.dto.CommentRequest;
-import com.smartcampus.backend.dto.TicketRequest;
-import com.smartcampus.backend.dto.TicketStatusRequest;
+import com.smartcampus.backend.dto.request.CommentRequest;
+import com.smartcampus.backend.dto.request.TicketRequest;
+import com.smartcampus.backend.dto.request.TicketStatusRequest;
 import com.smartcampus.backend.exception.ResourceNotFoundException;
 import com.smartcampus.backend.exception.UnauthorizedException;
 import com.smartcampus.backend.model.Comment;
