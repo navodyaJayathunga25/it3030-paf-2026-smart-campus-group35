@@ -1,7 +1,7 @@
 import apiClient from "./api";
 import type { User } from "@/lib/types";
 
-
+const TOKEN_KEY = "campus_hub_token";
 
 export const authService = {
   // Store JWT token from OAuth2 callback
@@ -21,6 +21,11 @@ export const authService = {
     return !!localStorage.getItem(TOKEN_KEY);
   },
 
+  // Get current user from backend
+  async getCurrentUser(): Promise<User> {
+    const { data } = await apiClient.get<{ data: User }>("/auth/me");
+    return data.data;
+  },
 
   // Initiate Google OAuth2 login
   loginWithGoogle() {

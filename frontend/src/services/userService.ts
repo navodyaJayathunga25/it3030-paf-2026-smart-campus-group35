@@ -23,8 +23,15 @@ export const userService = {
     return data.data;
   },
 
-  
+  async updateStatus(id: string, active: boolean): Promise<User> {
+    const { data } = await apiClient.put<ApiResponse<User>>(`/users/${id}/status`, { active });
+    return data.data;
+  },
 };
 
-
+export const adminService = {
+  async getStats(): Promise<Record<string, number>> {
+    const { data } = await apiClient.get<ApiResponse<Record<string, number>>>('/admin/stats');
+    return data.data;
+  },
 };
