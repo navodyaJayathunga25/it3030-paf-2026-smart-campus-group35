@@ -1,6 +1,6 @@
 package com.smartcampus.backend.service;
 
-import com.smartcampus.backend.dto.ResourceRequest;
+import com.smartcampus.backend.dto.request.ResourceRequest;
 import com.smartcampus.backend.exception.ResourceNotFoundException;
 import com.smartcampus.backend.model.Resource;
 import com.smartcampus.backend.model.Resource.ResourceStatus;

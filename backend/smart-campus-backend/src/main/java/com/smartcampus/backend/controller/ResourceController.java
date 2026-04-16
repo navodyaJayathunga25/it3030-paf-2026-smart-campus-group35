@@ -1,7 +1,7 @@
 package com.smartcampus.backend.controller;
 
-import com.smartcampus.backend.dto.ResourceRequest;
-import com.smartcampus.backend.dto.ApiResponse;
+import com.smartcampus.backend.dto.request.ResourceRequest;
+import com.smartcampus.backend.dto.response.ApiResponse;
 import com.smartcampus.backend.model.Resource;
 import com.smartcampus.backend.service.ResourceService;
 import jakarta.validation.Valid;

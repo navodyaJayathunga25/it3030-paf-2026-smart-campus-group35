@@ -1,4 +1,4 @@
-package com.smartcampus.backend.dto;
+package com.smartcampus.backend.dto.request;
 
 import lombok.Data;
 

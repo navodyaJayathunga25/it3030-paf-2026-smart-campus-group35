@@ -1,4 +1,4 @@
-package com.smartcampus.backend.dto;
+package com.smartcampus.backend.dto.request;
 
 import com.smartcampus.backend.model.Resource.ResourceStatus;
 import com.smartcampus.backend.model.Resource.ResourceType;
