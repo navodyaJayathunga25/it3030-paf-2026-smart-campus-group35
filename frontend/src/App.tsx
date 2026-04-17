@@ -13,7 +13,7 @@ import Landing from './pages/Landing';
 //import AuthError from './pages/AuthError';
 
 // User pages
-//import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/Dashboard';
 //import Facilities from './pages/Facilities';
 //import ResourceDetail from './pages/ResourceDetail';
 //import Bookings from './pages/Bookings';
