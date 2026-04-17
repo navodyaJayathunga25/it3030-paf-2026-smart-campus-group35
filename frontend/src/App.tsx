@@ -1,200 +1,239 @@
-import React from 'react';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom';
-import { Toaster } from 'sonner';
-import { useState } from 'react'
-// import { AuthProvider, useAuth } from './context/AuthContext';
-// import { Layout } from './components/Layout';
-// import { Landing } from './pages/Landing';
-// import { Login } from './pages/Login';
-// import { Register } from './pages/Register';
-// import { OAuthCallback } from './pages/OAuthCallback';
-// import { Dashboard } from './pages/Dashboard';
-// import { Facilities } from './pages/Facilities';
-// import { Bookings } from './pages/Bookings';
-// import { Tickets } from './pages/Tickets';
-// import { Notifications } from './pages/Notifications';
-// import { Admin } from './pages/Admin';
-// import { UserRole } from './types';
+import { Toaster } from "@/components/ui/sonner";
+import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 
-// Protected Route wrapper for role-based access
-// const ProtectedRoute = ({
-//   children,
-//   allowedRoles,
-// }: {
-//   children: React.ReactNode;
-//   allowedRoles?: UserRole[];
-// }) => {
-//   const { user, isLoading } = useAuth();
-//   if (isLoading) return null;
-//   if (!user) {
-//     return <Navigate to="/login" replace />;
-//   }
-//   if (allowedRoles && !allowedRoles.includes(user.role)) {
-//     return <Navigate to="/dashboard" replace />;
-//   }
-//   return <>{children}</>;
-// };
+// Public pages
+import Landing from "./pages/Landing";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import AuthCallback from "./pages/AuthCallback";
+import AuthError from "./pages/AuthError";
 
-// function AppRoutes() {
-//   return (
-//     <Routes>
-//       {/* Public routes */}
-//       <Route path="/" element={<Landing />} />
-//       <Route path="/login" element={<Login />} />
-//       <Route path="/register" element={<Register />} />
-//       <Route path="/oauth2/callback" element={<OAuthCallback />} />
+// User pages
+import Dashboard from "./pages/Dashboard";
+import Facilities from "./pages/Facilities";
+import ResourceDetail from "./pages/ResourceDetail";
+import Bookings from "./pages/Bookings";
+import BookingDetail from "./pages/BookingDetail";
+import BookingCreate from "./pages/BookingCreate";
+import Tickets from "./pages/Tickets";
+import TicketDetail from "./pages/TicketDetail";
+import TicketCreate from "./pages/TicketCreate";
+import Notifications from "./pages/Notification";
+import Profile from "./pages/Profile";
 
-//       {/* Protected routes inside Layout */}
-//       <Route element={<Layout />}>
-//         <Route path="/dashboard" element={<Dashboard />} />
-//         <Route path="/facilities" element={<Facilities />} />
-//         <Route path="/bookings" element={<Bookings />} />
-//         <Route path="/tickets" element={<Tickets />} />
-//         <Route path="/notifications" element={<Notifications />} />
-//         <Route
-//           path="/admin"
-//           element={
-//             <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-//               <Admin />
-//             </ProtectedRoute>
-//           }
-//         />
-//       </Route>
+// Admin pages
+import Admin from "./pages/Admin";
+import AdminBookings from "./pages/AdminBookings";
+import AdminTickets from "./pages/AdminTickets";
+import AdminResources from "./pages/AdminResources";
+import AdminUsers from "./pages/AdminUsers";
 
-//       {/* Catch-all */}
-//       <Route path="*" element={<Navigate to="/" replace />} />
-//     </Routes>
-//   );
-// }
+// Technician pages
+import MyAssignedTickets from "./pages/MyAssignedTickets";
 
-// export function App() {
-//   return (
-//     <AuthProvider>
-//       <Router>
-//         <AppRoutes />
-//         <Toaster position="top-right" richColors />
-//       </Router>
-//     </AuthProvider>
-//   );
-// }
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
 
-function App() {
-  const [count, setCount] = useState(0)
+// Protected route — redirects to /login if not authenticated
+function ProtectedRoute({
+  children,
+  roles,
+}: {
+  children: React.ReactNode;
+  roles?: string[];
+}) {
+  const { user, loading, isAuthenticated } = useAuth();
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          {/* <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" /> */}
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
-      <div className="ticks"></div>
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              {/* <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a> */}
-            </li>
-            <li>
-              {/* <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a> */}
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+  if (roles && user && !roles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+  return <>{children}</>;
 }
 
-export default App
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <ShadcnToaster />
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/auth/error" element={<AuthError />} />
+
+            {/* User (authenticated) */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/facilities"
+              element={
+                <ProtectedRoute>
+                  <Facilities />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/facilities/:id"
+              element={
+                <ProtectedRoute>
+                  <ResourceDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookings"
+              element={
+                <ProtectedRoute>
+                  <Bookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookings/create"
+              element={
+                <ProtectedRoute>
+                  <BookingCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookings/:id"
+              element={
+                <ProtectedRoute>
+                  <BookingDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets"
+              element={
+                <ProtectedRoute>
+                  <Tickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets/create"
+              element={
+                <ProtectedRoute>
+                  <TicketCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets/:id"
+              element={
+                <ProtectedRoute>
+                  <TicketDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin only */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/bookings"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AdminBookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/tickets"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AdminTickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/resources"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AdminResources />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Technician */}
+            <Route
+              path="/technician/tickets"
+              element={
+                <ProtectedRoute roles={["TECHNICIAN", "ADMIN"]}>
+                  <MyAssignedTickets />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;
