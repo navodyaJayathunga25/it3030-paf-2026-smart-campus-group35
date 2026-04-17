@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 // Public pages
-//import Landing from './pages/Landing';
+import Landing from './pages/Landing';
 //import Login from './pages/Login';
 //import Register from './pages/Register';
 //import AuthCallback from './pages/AuthCallback';
