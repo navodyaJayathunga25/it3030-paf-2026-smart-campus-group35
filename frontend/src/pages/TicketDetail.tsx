@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TicketStatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { ticketService } from "@/services/ticketService";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   ArrowLeft, MapPin, Clock, User, Mail, Phone, Send,
   CheckCircle2, Pencil, Trash2, MessageSquare, Loader2,

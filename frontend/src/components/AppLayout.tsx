@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import AppSidebar from "./AppSidebar";
 import NotificationBell from "./NotificationBell";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface AppLayoutProps {
   children: ReactNode;

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ticketService } from "@/services/ticketService";
 import { resourceService } from "@/services/resourceService";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { ticketCategories } from "@/lib/types";
 import type { TicketPriority } from "@/lib/types";
 import { ArrowLeft, Upload, X, Send, Loader2 } from "lucide-react";

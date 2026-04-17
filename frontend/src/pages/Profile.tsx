@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { bookingService } from "@/services/bookingService";
 import { ticketService } from "@/services/ticketService";
 import { User, Mail, Shield, CalendarCheck, Wrench } from "lucide-react";

@@ -3,7 +3,7 @@ import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 // Public pages
 import Landing from './pages/Landing';
@@ -22,7 +22,7 @@ import BookingCreate from './pages/BookingCreate';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
 import TicketCreate from './pages/TicketCreate';
-import Notifications from './pages/Notifications';
+import Notifications from './pages/Notification';
 import Profile from './pages/Profile';
 
 // Admin pages

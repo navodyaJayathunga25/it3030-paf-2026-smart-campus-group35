@@ -4,7 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookingStatusBadge, TicketStatusBadge } from "@/components/StatusBadge";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { bookingService } from "@/services/bookingService";
 import { ticketService } from "@/services/ticketService";
 import { notificationService } from "@/services/notificationService";
