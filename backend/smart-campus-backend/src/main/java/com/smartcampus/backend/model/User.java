@@ -39,6 +39,9 @@ public class User {
     private UserRole role = UserRole.USER;
 
     @Builder.Default
+    private UserStatus status = UserStatus.PENDING;
+
+    @Builder.Default
     private boolean active = true;
 
     @CreatedDate

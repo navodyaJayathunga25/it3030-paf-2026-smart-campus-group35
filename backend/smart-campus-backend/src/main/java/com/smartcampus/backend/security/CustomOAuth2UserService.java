@@ -2,6 +2,7 @@ package com.smartcampus.backend.security;
 
 import com.smartcampus.backend.model.User;
 import com.smartcampus.backend.model.UserRole;
+import com.smartcampus.backend.model.UserStatus;
 import com.smartcampus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,10 +54,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .provider(provider)
                 .providerId(providerId)
                 .role(UserRole.USER)
-                .active(true)
+                .status(UserStatus.PENDING)
+                .active(false)
                 .build();
             user = userRepository.save(user);
-            log.info("New OAuth2 user registered: {}", email);
+            log.info("New OAuth2 user registered (pending approval): {}", email);
         } else {
             // Update existing user's profile
             user.setName(name);

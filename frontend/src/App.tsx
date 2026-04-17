@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
 import AuthError from "./pages/AuthError";
+import AuthPending from "./pages/AuthPending";
 
 // User pages
 import Dashboard from "./pages/Dashboard";
@@ -66,6 +67,14 @@ function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
+  if (user?.status === "PENDING") {
+    return <Navigate to="/auth/pending" replace />;
+  }
+
+  if (user?.status === "REJECTED") {
+    return <Navigate to="/auth/error?reason=rejected" replace />;
+  }
+
   if (roles && user && !roles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -87,6 +96,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/error" element={<AuthError />} />
+            <Route path="/auth/pending" element={<AuthPending />} />
 
             {/* User (authenticated) */}
             <Route
