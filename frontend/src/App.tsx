@@ -22,8 +22,8 @@ import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
 import TicketCreate from './pages/TicketCreate';
-//import Notifications from './pages/Notifications';
-//import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
+import Profile from './pages/Profile';
 
 // Admin pages
 import Admin from './pages/Admin';
