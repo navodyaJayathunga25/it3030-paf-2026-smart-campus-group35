@@ -19,7 +19,7 @@ import Dashboard from './pages/Dashboard';
 //import Bookings from './pages/Bookings';
 //import BookingDetail from './pages/BookingDetail';
 //import BookingCreate from './pages/BookingCreate';
-//import Tickets from './pages/Tickets';
+import Tickets from './pages/Tickets';
 //import TicketDetail from './pages/TicketDetail';
 //import TicketCreate from './pages/TicketCreate';
 //import Notifications from './pages/Notifications';
