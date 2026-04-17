@@ -26,7 +26,7 @@ import Dashboard from './pages/Dashboard';
 //import Profile from './pages/Profile';
 
 // Admin pages
-//import Admin from './pages/Admin';
+import Admin from './pages/Admin';
 //import AdminBookings from './pages/AdminBookings';
 //import AdminTickets from './pages/AdminTickets';
 //import AdminResources from './pages/AdminResources';
