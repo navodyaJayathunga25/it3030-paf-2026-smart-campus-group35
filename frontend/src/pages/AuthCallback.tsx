@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { authService } from '@/services/authService';
-import { useAuth } from '@/contexts/AuthContext';
-import { GraduationCap } from 'lucide-react';
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { authService } from "@/services/authService";
+import { useAuth } from "@/context/AuthContext";
+import { GraduationCap } from "lucide-react";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -10,21 +10,23 @@ export default function AuthCallback() {
   const { refreshUser } = useAuth();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const error = searchParams.get('error');
+    const token = searchParams.get("token");
+    const error = searchParams.get("error");
 
     if (error) {
-      navigate(`/auth/error?error=${encodeURIComponent(error)}`, { replace: true });
+      navigate(`/auth/error?error=${encodeURIComponent(error)}`, {
+        replace: true,
+      });
       return;
     }
 
     if (token) {
       authService.storeToken(token);
       refreshUser().then(() => {
-        navigate('/dashboard', { replace: true });
+        navigate("/dashboard", { replace: true });
       });
     } else {
-      navigate('/auth/error?error=No+token+received', { replace: true });
+      navigate("/auth/error?error=No+token+received", { replace: true });
     }
   }, [searchParams, navigate, refreshUser]);
 
