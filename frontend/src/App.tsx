@@ -7,10 +7,10 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 // Public pages
 import Landing from './pages/Landing';
-//import Login from './pages/Login';
-//import Register from './pages/Register';
-//import AuthCallback from './pages/AuthCallback';
-//import AuthError from './pages/AuthError';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import AuthCallback from './pages/AuthCallback';
+import AuthError from './pages/AuthError';
 
 // User pages
 import Dashboard from './pages/Dashboard';
@@ -27,13 +27,13 @@ import Tickets from './pages/Tickets';
 
 // Admin pages
 import Admin from './pages/Admin';
-//import AdminBookings from './pages/AdminBookings';
-//import AdminTickets from './pages/AdminTickets';
-//import AdminResources from './pages/AdminResources';
+import AdminBookings from './pages/AdminBookings';
+import AdminTickets from './pages/AdminTickets';
+import AdminResources from './pages/AdminResources';
 import AdminUsers from './pages/AdminUsers';
 
 // Technician pages
-//import MyAssignedTickets from './pages/MyAssignedTickets';
+import MyAssignedTickets from './pages/MyAssignedTickets';
 
 const queryClient = new QueryClient({
   defaultOptions: {
