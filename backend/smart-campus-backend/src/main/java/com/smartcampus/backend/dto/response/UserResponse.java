@@ -1,6 +1,7 @@
 package com.smartcampus.backend.dto.response;
 
 import com.smartcampus.backend.model.UserRole;
+import com.smartcampus.backend.model.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class UserResponse {
     private String picture;
     private String department;
     private UserRole role;
+    private UserStatus status;
     private boolean active;
     private LocalDateTime createdAt;
 }

@@ -39,6 +39,6 @@ public class Notification {
     private LocalDateTime createdAt;
 
     public enum NotificationType {
-        BOOKING, TICKET, COMMENT
+        BOOKING, TICKET, COMMENT, USER
     }
 }
