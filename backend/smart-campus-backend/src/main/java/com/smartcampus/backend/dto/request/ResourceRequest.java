@@ -22,17 +22,21 @@ public class ResourceRequest {
     @NotBlank(message = "Location is required")
     private String location;
 
-    @NotBlank(message = "Building is required")
-    private String building;
+    //@NotBlank(message = "Building is required")
+    //private String building;
 
-    private String floor;
+    //private String floor;
 
     private String description;
 
-    private ResourceStatus status = ResourceStatus.ACTIVE;
+    @NotNull(message = "Status is required")
+    private ResourceStatus status;
 
-    private List<String> amenities;
+    private List<String> facilities;
 
     private String availabilityWindows;
+
+    // Admin-controlled access: which roles can access this resource
+    private List<String> allowedRoles;
 }
 
