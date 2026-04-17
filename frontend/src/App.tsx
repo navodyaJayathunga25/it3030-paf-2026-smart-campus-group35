@@ -30,7 +30,7 @@ import Dashboard from './pages/Dashboard';
 //import AdminBookings from './pages/AdminBookings';
 //import AdminTickets from './pages/AdminTickets';
 //import AdminResources from './pages/AdminResources';
-//import AdminUsers from './pages/AdminUsers';
+import AdminUsers from './pages/AdminUsers';
 
 // Technician pages
 //import MyAssignedTickets from './pages/MyAssignedTickets';
