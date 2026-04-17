@@ -7,16 +7,19 @@ import com.smartcampus.backend.model.UserRole;
 import com.smartcampus.backend.model.UserStatus;
 import com.smartcampus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -53,10 +56,15 @@ public class UserService {
     public UserResponse approveUser(String userId, UserRole role) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        log.info("Approving user {} ({}) — old status={}, new role={}",
+            user.getEmail(), user.getId(), user.getStatus(), role);
         user.setRole(role);
         user.setStatus(UserStatus.APPROVED);
         user.setActive(true);
-        return toResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+
+        emailService.sendWelcomeEmail(saved.getEmail(), saved.getName(), role);
+        return toResponse(saved);
     }
 
     public UserResponse rejectUser(String userId) {
