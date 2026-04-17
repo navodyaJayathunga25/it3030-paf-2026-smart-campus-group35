@@ -6,7 +6,7 @@ export type ResourceStatus = 'ACTIVE' | 'OUT_OF_SERVICE';
 export type BookingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'REJECTED';
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-export type NotificationType = 'BOOKING' | 'TICKET' | 'COMMENT';
+export type NotificationType = 'BOOKING' | 'TICKET' | 'COMMENT' | 'USER';
 
 export interface User {
   id: string;
