@@ -35,6 +35,15 @@ public class User {
 
     private String department;
 
+    private String passwordHash;
+
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    private String emailVerificationToken;
+
+    private LocalDateTime emailVerificationExpiry;
+
     @Builder.Default
     private UserRole role = UserRole.USER;
 

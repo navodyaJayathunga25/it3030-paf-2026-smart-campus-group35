@@ -43,6 +43,71 @@ public class EmailService {
     }
 
     @Async
+    public void sendVerificationEmail(String toEmail, String name, String verificationToken) {
+        log.info("sendVerificationEmail invoked for {} — enabled={}, mailSender={}",
+            toEmail, enabled, mailSender != null ? "present" : "NULL");
+        if (!enabled || mailSender == null) {
+            log.warn("Mail disabled or JavaMailSender missing — skipping verification email to {}", toEmail);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            helper.setFrom(new InternetAddress(fromAddress, fromName));
+            helper.setTo(toEmail);
+            helper.setSubject("Verify your email — SmartCampus");
+            helper.setText(buildVerificationHtml(name, verificationToken), true);
+            mailSender.send(message);
+            log.info("Verification email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send verification email to {}: {}", toEmail, e.getMessage(), e);
+        }
+    }
+
+    private String buildVerificationHtml(String name, String token) {
+        String verifyUrl = frontendUrl + "/verify-email?token=" + token;
+        String safeName = escape(name);
+        String firstName = safeName.contains(" ") ? safeName.substring(0, safeName.indexOf(' ')) : safeName;
+
+        return "<!doctype html>"
+            + "<html lang=\"en\"><head><meta charset=\"utf-8\"/>"
+            + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>"
+            + "<title>Verify your email</title></head>"
+            + "<body style=\"margin:0;padding:0;background:#eef2f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;\">"
+            + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#eef2f7;padding:40px 16px;\">"
+            + "<tr><td align=\"center\">"
+            + "<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;\">"
+            + "<tr><td style=\"height:4px;background:linear-gradient(90deg,#2563eb 0%,#4f46e5 100%);\">&nbsp;</td></tr>"
+            + "<tr><td style=\"padding:40px 40px 8px;\">"
+            + "<p style=\"margin:0 0 8px;font-size:12px;font-weight:700;color:#2563eb;letter-spacing:1.2px;text-transform:uppercase;\">Confirm Your Email</p>"
+            + "<h1 style=\"margin:0 0 12px;color:#0f172a;font-size:26px;line-height:1.3;font-weight:700;\">Welcome, " + firstName + "!</h1>"
+            + "<p style=\"margin:0;font-size:15px;line-height:1.6;color:#475569;\">"
+            + "Thanks for signing up for SmartCampus. Please confirm your email address so we can send your request to an administrator for approval."
+            + "</p>"
+            + "</td></tr>"
+            + "<tr><td style=\"padding:28px 40px 8px;\">"
+            + "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"border-radius:10px;background:#2563eb;\">"
+            + "<a href=\"" + verifyUrl + "\" style=\"display:inline-block;background:linear-gradient(135deg,#2563eb 0%,#4f46e5 100%);color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 30px;border-radius:10px;\">Verify my email &rarr;</a>"
+            + "</td></tr></table>"
+            + "<p style=\"margin:14px 0 0;font-size:12px;color:#94a3b8;line-height:1.6;\">"
+            + "Or paste this link into your browser: <a href=\"" + verifyUrl + "\" style=\"color:#2563eb;word-break:break-all;\">" + verifyUrl + "</a>"
+            + "</p>"
+            + "<p style=\"margin:14px 0 0;font-size:12px;color:#94a3b8;\">This link expires in 24 hours.</p>"
+            + "</td></tr>"
+            + "<tr><td style=\"padding:28px 40px 36px;\">"
+            + "<p style=\"margin:0 0 8px;font-size:14px;font-weight:600;color:#0f172a;\">What happens next?</p>"
+            + "<p style=\"margin:0;font-size:13px;line-height:1.65;color:#475569;\">"
+            + "After you verify, your account goes to a campus administrator for review. You'll receive another email once it's approved, and then you can sign in."
+            + "</p>"
+            + "</td></tr>"
+            + "<tr><td style=\"background:#f8fafc;border-top:1px solid #e2e8f0;padding:20px 40px;\">"
+            + "<p style=\"margin:0;font-size:11px;color:#94a3b8;\">If you didn't sign up for SmartCampus, you can safely ignore this email.</p>"
+            + "</td></tr>"
+            + "</table>"
+            + "</td></tr></table></body></html>";
+    }
+
+    @Async
     public void sendWelcomeEmail(String toEmail, String name, UserRole role) {
         log.info("sendWelcomeEmail invoked for {} (role={}) — enabled={}, mailSender={}",
             toEmail, role, enabled, mailSender != null ? "present" : "NULL");
