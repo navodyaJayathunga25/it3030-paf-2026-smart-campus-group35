@@ -1,8 +1,11 @@
 package com.smartcampus.backend.security;
 
+import com.smartcampus.backend.model.Notification.NotificationType;
 import com.smartcampus.backend.model.User;
 import com.smartcampus.backend.model.UserRole;
+import com.smartcampus.backend.model.UserStatus;
 import com.smartcampus.backend.repository.UserRepository;
+import com.smartcampus.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -20,6 +23,7 @@ import java.util.Map;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -53,10 +57,19 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .provider(provider)
                 .providerId(providerId)
                 .role(UserRole.USER)
-                .active(true)
+                .status(UserStatus.PENDING)
+                .active(false)
                 .build();
             user = userRepository.save(user);
-            log.info("New OAuth2 user registered: {}", email);
+            log.info("New OAuth2 user registered (pending approval): {}", email);
+
+            notificationService.notifyAdmins(
+                NotificationType.USER,
+                "New signup awaiting approval",
+                name + " (" + email + ") signed up and is waiting for role assignment.",
+                user.getId(),
+                "/admin/users"
+            );
         } else {
             // Update existing user's profile
             user.setName(name);

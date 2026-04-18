@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ResourceStatusBadge } from "@/components/StatusBadge";
+import { useAuth } from "@/context/AuthContext";
 import { resourceService } from "@/services/resourceService";
 import { getResourceTypeIcon, getResourceTypeLabel } from "@/lib/types";
 import { Search, Grid3X3, List, MapPin, Users, Clock, ArrowRight, Loader2 } from "lucide-react";
 
 export default function Facilities() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -27,11 +29,17 @@ export default function Facilities() {
     }),
   });
 
-  const filtered = resources.filter((resource) => {
+  const visibleResources = resources.filter((resource) => {
+    const allowedRoles = resource.allowedRoles ?? [];
+    if (allowedRoles.length === 0) return true;
+    return !!user?.role && allowedRoles.includes(user.role);
+  });
+
+  const filtered = visibleResources.filter((resource) => {
     if (capacityFilter === "ALL") return true;
 
     const capacity = resource.capacity;
-    if (capacity == null) return capacityFilter === "UNSPECIFIED";
+    if (capacity == null) return false;
 
     if (capacityFilter === "RANGE_1_30") return capacity >= 1 && capacity <= 30;
     if (capacityFilter === "RANGE_31_60") return capacity >= 31 && capacity <= 60;
@@ -95,7 +103,6 @@ export default function Facilities() {
               <SelectItem value="RANGE_31_60">31 to 60</SelectItem>
               <SelectItem value="RANGE_61_120">61 to 120</SelectItem>
               <SelectItem value="RANGE_121_PLUS">121+</SelectItem>
-              <SelectItem value="UNSPECIFIED">Unspecified</SelectItem>
             </SelectContent>
           </Select>
 

@@ -7,12 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ticketService } from "@/services/ticketService";
 import { resourceService } from "@/services/resourceService";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { ticketCategories } from "@/lib/types";
 import type { TicketPriority } from "@/lib/types";
+import { uploadManyToCloudinary } from "@/lib/cloudinary";
 import { ArrowLeft, Upload, X, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,9 +42,20 @@ export default function TicketCreate() {
     queryFn: () => resourceService.getAll({ status: "ACTIVE" }),
   });
 
+  const [uploading, setUploading] = useState(false);
+
   const mutation = useMutation({
-    mutationFn: () => ticketService.create(
-      {
+    mutationFn: async () => {
+      let attachmentUrls: string[] = [];
+      if (files.length > 0) {
+        setUploading(true);
+        try {
+          attachmentUrls = await uploadManyToCloudinary(files);
+        } finally {
+          setUploading(false);
+        }
+      }
+      return ticketService.create({
         resourceId: resourceId || undefined,
         location,
         category,
@@ -45,14 +63,17 @@ export default function TicketCreate() {
         priority: priority as TicketPriority,
         contactEmail,
         contactPhone,
-      },
-      files.length > 0 ? files : undefined
-    ),
+        attachmentUrls: attachmentUrls.length > 0 ? attachmentUrls : undefined,
+      });
+    },
     onSuccess: (ticket) => {
       toast.success("Ticket created successfully");
       navigate(`/tickets/${ticket.id}`);
     },
-    onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed to create ticket"),
+    onError: (err: any) =>
+      toast.error(
+        err.response?.data?.message ?? err.message ?? "Failed to create ticket",
+      ),
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,33 +100,51 @@ export default function TicketCreate() {
   };
 
   return (
-    <AppLayout title="Create Ticket" subtitle="Report an issue or request maintenance">
-      <Button variant="ghost" className="mb-4 text-slate-600" onClick={() => navigate(-1)}>
+    <AppLayout
+      title="Create Ticket"
+      subtitle="Report an issue or request maintenance"
+    >
+      <Button
+        variant="ghost"
+        className="mb-4 text-slate-600"
+        onClick={() => navigate(-1)}
+      >
         <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
       <form onSubmit={handleSubmit} className="max-w-2xl">
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Issue Details</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              Issue Details
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Category *</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
                   <SelectContent>
                     {ticketCategories.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Priority *</Label>
-                <Select value={priority} onValueChange={(v) => setPriority(v as TicketPriority)}>
-                  <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
+                <Select
+                  value={priority}
+                  onValueChange={(v) => setPriority(v as TicketPriority)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="LOW">Low</SelectItem>
                     <SelectItem value="MEDIUM">Medium</SelectItem>
@@ -118,12 +157,19 @@ export default function TicketCreate() {
 
             <div className="space-y-2">
               <Label>Related Resource (optional)</Label>
-              <Select value={resourceId} onValueChange={setResourceId}>
-                <SelectTrigger><SelectValue placeholder="Select a resource (optional)" /></SelectTrigger>
+              <Select
+                value={resourceId || "none"}
+                onValueChange={(v) => setResourceId(v === "none" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a resource (optional)" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {resources.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -153,8 +199,13 @@ export default function TicketCreate() {
               <Label>Attachments (max 3 images)</Label>
               <div className="flex flex-wrap gap-2">
                 {files.map((file, i) => (
-                  <div key={i} className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg">
-                    <span className="text-xs text-slate-700 max-w-[120px] truncate">{file.name}</span>
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg"
+                  >
+                    <span className="text-xs text-slate-700 max-w-[120px] truncate">
+                      {file.name}
+                    </span>
                     <button type="button" onClick={() => removeFile(i)}>
                       <X className="h-3.5 w-3.5 text-slate-500 hover:text-red-500" />
                     </button>
@@ -206,14 +257,14 @@ export default function TicketCreate() {
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || uploading}
             >
-              {mutation.isPending ? (
+              {mutation.isPending || uploading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Submit Ticket
+              {uploading ? "Uploading images..." : "Submit Ticket"}
             </Button>
           </CardContent>
         </Card>
