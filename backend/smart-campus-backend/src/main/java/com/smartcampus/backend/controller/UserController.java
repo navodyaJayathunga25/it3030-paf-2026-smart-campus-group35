@@ -72,5 +72,39 @@ public class UserController {
             ApiResponse.success("User status updated", userService.updateUserStatus(id, active))
         );
     }
+
+    /**
+     * GET /api/users/pending - List users pending admin approval (ADMIN only)
+     */
+    @GetMapping("/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getPendingUsers() {
+        return ResponseEntity.ok(ApiResponse.success(userService.getPendingUsers()));
+    }
+
+    /**
+     * PUT /api/users/{id}/approve - Approve pending user and assign role (ADMIN only)
+     */
+    @PutMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> approveUser(
+        @PathVariable String id,
+        @RequestBody Map<String, String> body) {
+        UserRole role = UserRole.valueOf(body.getOrDefault("role", "USER"));
+        return ResponseEntity.ok(
+            ApiResponse.success("User approved", userService.approveUser(id, role))
+        );
+    }
+
+    /**
+     * PUT /api/users/{id}/reject - Reject a pending user (ADMIN only)
+     */
+    @PutMapping("/{id}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> rejectUser(@PathVariable String id) {
+        return ResponseEntity.ok(
+            ApiResponse.success("User rejected", userService.rejectUser(id))
+        );
+    }
 }
 

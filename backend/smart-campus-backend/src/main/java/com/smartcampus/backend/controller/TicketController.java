@@ -12,14 +12,11 @@ import com.smartcampus.backend.service.TicketService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -49,14 +46,13 @@ public class TicketController {
     }
 
     /**
-     * POST /api/tickets - Create new ticket (with optional image attachments)
+     * POST /api/tickets - Create new ticket (images uploaded to Cloudinary by client; URLs sent in body)
      */
-    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    @PostMapping
     public ResponseEntity<ApiResponse<Ticket>> createTicket(
-        @RequestPart("data") @Valid TicketRequest request,
-        @RequestPart(value = "files", required = false) List<MultipartFile> files,
-        @AuthenticationPrincipal User currentUser) throws IOException {
-        Ticket ticket = ticketService.createTicket(request, files, currentUser);
+        @Valid @RequestBody TicketRequest request,
+        @AuthenticationPrincipal User currentUser) {
+        Ticket ticket = ticketService.createTicket(request, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.success("Ticket created successfully", ticket));
     }
