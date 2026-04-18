@@ -277,9 +277,13 @@ export default function TicketDetail() {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="h-20 w-20 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-blue-600 hover:bg-slate-200 transition-colors"
+                        className="h-20 w-20 rounded-lg overflow-hidden bg-slate-100 hover:opacity-80 transition-opacity"
                       >
-                        Image {i + 1}
+                        <img
+                          src={url}
+                          alt={`Attachment ${i + 1}`}
+                          className="h-full w-full object-cover"
+                        />
                       </a>
                     ))}
                   </div>

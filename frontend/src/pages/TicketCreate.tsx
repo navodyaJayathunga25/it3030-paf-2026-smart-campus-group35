@@ -19,6 +19,7 @@ import { resourceService } from "@/services/resourceService";
 import { useAuth } from "@/context/AuthContext";
 import { ticketCategories } from "@/lib/types";
 import type { TicketPriority } from "@/lib/types";
+import { uploadManyToCloudinary } from "@/lib/cloudinary";
 import { ArrowLeft, Upload, X, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,26 +42,38 @@ export default function TicketCreate() {
     queryFn: () => resourceService.getAll({ status: "ACTIVE" }),
   });
 
+  const [uploading, setUploading] = useState(false);
+
   const mutation = useMutation({
-    mutationFn: () =>
-      ticketService.create(
-        {
-          resourceId: resourceId || undefined,
-          location,
-          category,
-          description,
-          priority: priority as TicketPriority,
-          contactEmail,
-          contactPhone,
-        },
-        files.length > 0 ? files : undefined,
-      ),
+    mutationFn: async () => {
+      let attachmentUrls: string[] = [];
+      if (files.length > 0) {
+        setUploading(true);
+        try {
+          attachmentUrls = await uploadManyToCloudinary(files);
+        } finally {
+          setUploading(false);
+        }
+      }
+      return ticketService.create({
+        resourceId: resourceId || undefined,
+        location,
+        category,
+        description,
+        priority: priority as TicketPriority,
+        contactEmail,
+        contactPhone,
+        attachmentUrls: attachmentUrls.length > 0 ? attachmentUrls : undefined,
+      });
+    },
     onSuccess: (ticket) => {
       toast.success("Ticket created successfully");
       navigate(`/tickets/${ticket.id}`);
     },
     onError: (err: any) =>
-      toast.error(err.response?.data?.message ?? "Failed to create ticket"),
+      toast.error(
+        err.response?.data?.message ?? err.message ?? "Failed to create ticket",
+      ),
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -244,14 +257,14 @@ export default function TicketCreate() {
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || uploading}
             >
-              {mutation.isPending ? (
+              {mutation.isPending || uploading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Submit Ticket
+              {uploading ? "Uploading images..." : "Submit Ticket"}
             </Button>
           </CardContent>
         </Card>

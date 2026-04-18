@@ -15,9 +15,7 @@ import com.smartcampus.backend.repository.TicketRepository;
 import com.smartcampus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +28,6 @@ public class TicketService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
-    private final FileStorageService fileStorageService;
 
     public List<Ticket> getTicketsForUser(User currentUser) {
         return switch (currentUser.getRole()) {
@@ -51,19 +48,13 @@ public class TicketService {
         return ticket;
     }
 
-    public Ticket createTicket(TicketRequest request, List<MultipartFile> files, User currentUser) throws IOException {
-        List<String> attachmentUrls = new ArrayList<>();
+    public Ticket createTicket(TicketRequest request, User currentUser) {
+        List<String> attachmentUrls = request.getAttachmentUrls() != null
+            ? new ArrayList<>(request.getAttachmentUrls())
+            : new ArrayList<>();
 
-        if (files != null && !files.isEmpty()) {
-            if (files.size() > 3) {
-                throw new IllegalArgumentException("Maximum 3 attachments are allowed");
-            }
-            for (MultipartFile file : files) {
-                if (!file.isEmpty()) {
-                    String url = fileStorageService.storeFile(file);
-                    attachmentUrls.add(url);
-                }
-            }
+        if (attachmentUrls.size() > 3) {
+            throw new IllegalArgumentException("Maximum 3 attachments are allowed");
         }
 
         Ticket ticket = Ticket.builder()
