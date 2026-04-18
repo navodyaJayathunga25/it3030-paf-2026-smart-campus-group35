@@ -28,6 +28,7 @@ public class TicketService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
 
     public List<Ticket> getTicketsForUser(User currentUser) {
         return switch (currentUser.getRole()) {
@@ -71,7 +72,20 @@ public class TicketService {
             .attachmentUrls(attachmentUrls)
             .build();
 
-        return ticketRepository.save(ticket);
+        Ticket saved = ticketRepository.save(ticket);
+
+        String recipient = (ticket.getContactEmail() != null && !ticket.getContactEmail().isBlank())
+            ? ticket.getContactEmail()
+            : currentUser.getEmail();
+        emailService.sendTicketReceivedEmail(
+            recipient,
+            currentUser.getName(),
+            saved.getId(),
+            saved.getCategory(),
+            saved.getDescription()
+        );
+
+        return saved;
     }
 
     public Ticket updateTicketStatus(String ticketId, TicketStatusRequest request, User currentUser) {
@@ -118,7 +132,36 @@ public class TicketService {
             "/tickets/" + ticket.getId()
         );
 
+        if (newStatus == TicketStatus.RESOLVED || newStatus == TicketStatus.CLOSED
+            || newStatus == TicketStatus.REJECTED) {
+            String recipient = resolveRecipientEmail(saved);
+            if (recipient != null && !recipient.isBlank()) {
+                String recipientName = saved.getUserName() != null ? saved.getUserName() : "there";
+                if (newStatus == TicketStatus.REJECTED) {
+                    emailService.sendTicketRejectedEmail(
+                        recipient, recipientName, saved.getId(),
+                        saved.getCategory(), saved.getRejectionReason()
+                    );
+                } else {
+                    emailService.sendTicketResolvedEmail(
+                        recipient, recipientName, saved.getId(),
+                        saved.getCategory(), saved.getResolutionNotes(),
+                        newStatus == TicketStatus.CLOSED
+                    );
+                }
+            }
+        }
+
         return saved;
+    }
+
+    private String resolveRecipientEmail(Ticket ticket) {
+        if (ticket.getContactEmail() != null && !ticket.getContactEmail().isBlank()) {
+            return ticket.getContactEmail();
+        }
+        return userRepository.findById(ticket.getUserId())
+            .map(User::getEmail)
+            .orElse(null);
     }
 
     public Ticket assignTicket(String ticketId, String technicianId, User admin) {
