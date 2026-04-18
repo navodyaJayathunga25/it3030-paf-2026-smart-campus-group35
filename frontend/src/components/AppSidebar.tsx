@@ -23,6 +23,8 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   roles: string[];
+  // Additional path prefixes that should also mark this item active.
+  matchPaths?: string[];
 }
 
 const navItems: NavItem[] = [
@@ -42,13 +44,13 @@ const navItems: NavItem[] = [
     label: "My Bookings",
     href: "/bookings",
     icon: CalendarCheck,
-    roles: ["USER", "ADMIN", "TECHNICIAN", "LECTURER"],
+    roles: ["USER", "TECHNICIAN", "LECTURER"],
   },
   {
     label: "My Tickets",
     href: "/tickets",
     icon: Wrench,
-    roles: ["USER", "ADMIN", "TECHNICIAN", "LECTURER"],
+    roles: ["USER", "TECHNICIAN", "LECTURER"],
   },
   {
     label: "Notifications",
@@ -71,12 +73,14 @@ const adminItems: NavItem[] = [
     href: "/admin/bookings",
     icon: ClipboardList,
     roles: ["ADMIN"],
+    matchPaths: ["/bookings"],
   },
   {
     label: "All Tickets",
     href: "/admin/tickets",
     icon: Wrench,
     roles: ["ADMIN"],
+    matchPaths: ["/tickets"],
   },
   {
     label: "Resources",
@@ -120,9 +124,12 @@ export default function AppSidebar() {
         )}
         <nav className="space-y-1 px-2">
           {filtered.map((item) => {
-            const isActive =
-              location.pathname === item.href ||
-              location.pathname.startsWith(item.href + "/");
+            const paths = [item.href, ...(item.matchPaths ?? [])];
+            const isActive = paths.some(
+              (p) =>
+                location.pathname === p ||
+                location.pathname.startsWith(p + "/"),
+            );
             return (
               <Link
                 key={item.href}
