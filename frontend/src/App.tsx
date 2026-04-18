@@ -12,6 +12,7 @@ import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
 import AuthError from "./pages/AuthError";
 import AuthPending from "./pages/AuthPending";
+import VerifyEmail from "./pages/VerifyEmail";
 
 // User pages
 import Dashboard from "./pages/Dashboard";
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/error" element={<AuthError />} />
             <Route path="/auth/pending" element={<AuthPending />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
 
             {/* User (authenticated) */}
             <Route
