@@ -42,6 +42,11 @@ export const userService = {
     const { data } = await apiClient.put<ApiResponse<User>>(`/users/${id}/reject`);
     return data.data;
   },
+
+  async updateMyPicture(picture: string): Promise<User> {
+    const { data } = await apiClient.put<ApiResponse<User>>('/users/me/picture', { picture });
+    return data.data;
+  },
 };
 
 export const adminService = {

@@ -46,6 +46,28 @@ public class UserController {
     }
 
     /**
+     * PUT /api/users/me/picture - Update own profile picture (any authenticated user)
+     * Body: { "picture": "data:image/png;base64,...." }
+     */
+    @PutMapping("/me/picture")
+    public ResponseEntity<ApiResponse<UserResponse>> updateMyPicture(
+        @AuthenticationPrincipal User currentUser,
+        @RequestBody Map<String, String> body) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated"));
+        }
+        String picture = body.get("picture");
+        if (picture != null && picture.length() > 2_000_000) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Image is too large. Please choose a smaller file."));
+        }
+        return ResponseEntity.ok(
+            ApiResponse.success("Profile picture updated",
+                userService.updateUserPicture(currentUser.getId(), picture))
+        );
+    }
+
+    /**
      * PUT /api/users/{id}/role - Update user role (ADMIN only)
      */
     @PutMapping("/{id}/role")
