@@ -6,10 +6,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class TicketRequest {
 
     private String resourceId;
+
+    private List<String> attachmentUrls;
 
     @NotBlank(message = "Location is required")
     private String location;
