@@ -27,6 +27,21 @@ export const userService = {
     const { data } = await apiClient.put<ApiResponse<User>>(`/users/${id}/status`, { active });
     return data.data;
   },
+
+  async getPending(): Promise<User[]> {
+    const { data } = await apiClient.get<ApiResponse<User[]>>('/users/pending');
+    return data.data;
+  },
+
+  async approve(id: string, role: UserRole): Promise<User> {
+    const { data } = await apiClient.put<ApiResponse<User>>(`/users/${id}/approve`, { role });
+    return data.data;
+  },
+
+  async reject(id: string): Promise<User> {
+    const { data } = await apiClient.put<ApiResponse<User>>(`/users/${id}/reject`);
+    return data.data;
+  },
 };
 
 export const adminService = {

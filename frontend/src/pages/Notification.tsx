@@ -6,19 +6,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { notificationService } from "@/services/notificationService";
 import type { NotificationType } from "@/lib/types";
-import { Bell, CalendarCheck, Wrench, MessageSquare, CheckCheck, Circle, Loader2 } from "lucide-react";
+import { Bell, CalendarCheck, Wrench, MessageSquare, CheckCheck, Circle, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 const typeIcons: Record<NotificationType, React.ElementType> = {
   BOOKING: CalendarCheck,
   TICKET: Wrench,
   COMMENT: MessageSquare,
+  USER: UserPlus,
 };
 
 const typeColors: Record<NotificationType, string> = {
   BOOKING: "bg-blue-100 text-blue-600",
   TICKET: "bg-emerald-100 text-emerald-600",
   COMMENT: "bg-purple-100 text-purple-600",
+  USER: "bg-amber-100 text-amber-600",
 };
 
 export default function Notifications() {
@@ -65,7 +67,7 @@ export default function Notifications() {
     <AppLayout title="Notifications" subtitle="Stay updated on your bookings and tickets">
       <div className="flex items-center justify-between mb-6">
         <div className="flex gap-2 flex-wrap">
-          {["ALL", "UNREAD", "BOOKING", "TICKET", "COMMENT"].map((f) => (
+          {["ALL", "UNREAD", "BOOKING", "TICKET", "COMMENT", "USER"].map((f) => (
             <Button
               key={f}
               variant={filter === f ? "default" : "outline"}

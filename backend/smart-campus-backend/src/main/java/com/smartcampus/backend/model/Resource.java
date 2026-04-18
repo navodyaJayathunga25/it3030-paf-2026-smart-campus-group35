@@ -30,20 +30,22 @@ public class Resource {
 
     private String location;
 
-    private String building;
+    //private String building;
 
-    private String floor;
+    //private String floor;
 
     private String description;
 
-    @Builder.Default
-    private ResourceStatus status = ResourceStatus.ACTIVE;
+    private ResourceStatus status;
 
-    private List<String> amenities;
+    private List<String> facilities;
 
     private String availabilityWindows;
 
-    private String imageUrl;
+    //private String imageUrl;
+
+    // Admin-controlled access: which roles can access this resource
+    private List<String> allowedRoles;
 
     @CreatedDate
     private LocalDateTime createdAt;
