@@ -144,12 +144,15 @@ export default function TicketCreate() {
 
             <div className="space-y-2">
               <Label>Related Resource (optional)</Label>
-              <Select value={resourceId} onValueChange={setResourceId}>
+              <Select
+                value={resourceId || "none"}
+                onValueChange={(v) => setResourceId(v === "none" ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a resource (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {resources.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.name}
