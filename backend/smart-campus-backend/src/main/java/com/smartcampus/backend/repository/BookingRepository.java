@@ -30,4 +30,6 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
                                            LocalTime startTime, LocalTime endTime);
 
     long countByUserIdAndStatus(String userId, BookingStatus status);
+
+    long countByStatus(BookingStatus status);
 }

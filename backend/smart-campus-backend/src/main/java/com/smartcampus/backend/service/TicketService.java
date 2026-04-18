@@ -123,14 +123,16 @@ public class TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
 
-        notificationService.sendNotification(
-            ticket.getUserId(),
-            NotificationType.TICKET,
-            "Ticket Status Updated",
-            "Your ticket has been updated to: " + newStatus.name(),
-            ticket.getId(),
-            "/tickets/" + ticket.getId()
-        );
+        if (newStatus == TicketStatus.RESOLVED) {
+            notificationService.sendNotification(
+                ticket.getUserId(),
+                NotificationType.TICKET,
+                "Ticket Resolved",
+                "Your ticket \"" + ticket.getCategory() + "\" has been resolved.",
+                ticket.getId(),
+                "/tickets/" + ticket.getId()
+            );
+        }
 
         if (newStatus == TicketStatus.RESOLVED || newStatus == TicketStatus.CLOSED
             || newStatus == TicketStatus.REJECTED) {
@@ -183,10 +185,11 @@ public class TicketService {
         Ticket saved = ticketRepository.save(ticket);
 
         notificationService.sendNotification(
-            ticket.getUserId(),
+            technician.getId(),
             NotificationType.TICKET,
-            "Ticket Assigned",
-            "Your ticket has been assigned to " + technician.getName(),
+            "New Ticket Assigned",
+            "You have been assigned a new ticket: \"" + ticket.getCategory()
+                + "\" (Priority: " + ticket.getPriority().name() + ")",
             ticket.getId(),
             "/tickets/" + ticket.getId()
         );
