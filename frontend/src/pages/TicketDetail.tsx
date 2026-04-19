@@ -5,13 +5,28 @@ import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TicketStatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { ticketService } from "@/services/ticketService";
+import { userService } from "@/services/userService";
 import { useAuth } from "@/context/AuthContext";
+import type { TicketStatus } from "@/lib/types";
 import {
   ArrowLeft,
-  MapPin,
-  Clock,
   User,
   Mail,
   Phone,
@@ -21,6 +36,10 @@ import {
   Trash2,
   MessageSquare,
   Loader2,
+  UserPlus,
+  Shield,
+  PlayCircle,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,6 +54,12 @@ export default function TicketDetail() {
   const [newComment, setNewComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [resolutionNotes, setResolutionNotes] = useState("");
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const isAdmin = user?.role === "ADMIN";
+  const isTechnician = user?.role === "TECHNICIAN";
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: ["ticket", id],
@@ -75,6 +100,40 @@ export default function TicketDetail() {
       toast.error(err.response?.data?.message ?? "Failed to update comment"),
   });
 
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: userService.getAll,
+    enabled: isAdmin,
+  });
+
+  const technicians = allUsers.filter((u) => u.role === "TECHNICIAN");
+
+  const assignMutation = useMutation({
+    mutationFn: (techId: string) => ticketService.assignTechnician(id!, techId),
+    onSuccess: () => {
+      toast.success("Technician assigned");
+      queryClient.invalidateQueries({ queryKey: ["ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message ?? "Failed to assign"),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ status, notes }: { status: TicketStatus; notes?: string }) =>
+      ticketService.updateStatus(id!, status, notes),
+    onSuccess: (_, vars) => {
+      toast.success(`Ticket marked ${vars.status.replace("_", " ").toLowerCase()}`);
+      queryClient.invalidateQueries({ queryKey: ["ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+      setResolutionNotes("");
+      setRejectDialogOpen(false);
+      setRejectReason("");
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message ?? "Failed to update status"),
+  });
+
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId: string) =>
       ticketService.deleteComment(id!, commentId),
@@ -109,6 +168,20 @@ export default function TicketDetail() {
 
   const currentStepIdx = statusSteps.indexOf(ticket.status);
   const shortId = ticket.id.slice(-8).toUpperCase();
+
+  const hasTechnician = !!ticket.assignedTo;
+  const isAssignedTech =
+    isTechnician && hasTechnician && ticket.assignedTo === user?.id;
+  // Admin may drive start/resolve only while no technician is assigned.
+  const adminUnassigned = isAdmin && !hasTechnician;
+  const canStartWork =
+    (isAssignedTech || adminUnassigned) && ticket.status === "OPEN";
+  const canResolve =
+    (isAssignedTech || adminUnassigned) && ticket.status === "IN_PROGRESS";
+  const canCloseTicket = isAdmin && ticket.status === "RESOLVED";
+  const canReject = isAdmin && ticket.status === "OPEN";
+  const showStatusPanel =
+    canStartWork || canResolve || canCloseTicket || canReject;
 
   const handleAddComment = () => {
     if (!newComment.trim()) return;
@@ -477,10 +550,12 @@ export default function TicketDetail() {
             </CardContent>
           </Card>
 
+          {/* Assigned technician (visible to everyone) */}
           {ticket.assignedToName && (
             <Card className="border-0 shadow-sm">
               <CardContent className="p-6 space-y-3">
-                <h3 className="text-base font-semibold text-slate-900">
+                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-blue-600" />
                   Assigned Technician
                 </h3>
                 <div className="flex items-center gap-3">
@@ -494,6 +569,144 @@ export default function TicketDetail() {
                     <p className="text-xs text-slate-500">Technician</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Admin: assign technician */}
+          {isAdmin && ticket.status !== "CLOSED" && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6 space-y-3">
+                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-purple-600" />
+                  {ticket.assignedToName ? "Reassign Technician" : "Assign Technician"}
+                </h3>
+                <Select
+                  onValueChange={(techId) => assignMutation.mutate(techId)}
+                  disabled={assignMutation.isPending}
+                >
+                  <SelectTrigger className="w-full h-10">
+                    <SelectValue placeholder="Select a technician..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {technicians.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-slate-500">
+                        No technicians available
+                      </div>
+                    ) : (
+                      technicians.map((tech) => (
+                        <SelectItem key={tech.id} value={tech.id}>
+                          {tech.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {assignMutation.isPending && (
+                  <p className="text-xs text-slate-500 flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Assigning...
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Admin / Technician: status actions */}
+          {showStatusPanel && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6 space-y-3">
+                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                  <PlayCircle className="h-4 w-4 text-emerald-600" />
+                  Update Status
+                </h3>
+
+                {canResolve && (
+                  <Textarea
+                    placeholder="Resolution notes (required to resolve)..."
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                    rows={2}
+                    className="text-sm"
+                  />
+                )}
+
+                <div className="flex flex-col gap-2">
+                  {canStartWork && (
+                    <Button
+                      size="sm"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      disabled={statusMutation.isPending}
+                      onClick={() =>
+                        statusMutation.mutate({ status: "IN_PROGRESS" })
+                      }
+                    >
+                      <PlayCircle className="h-4 w-4 mr-2" /> Start Work
+                    </Button>
+                  )}
+
+                  {canResolve && (
+                    <Button
+                      size="sm"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                      disabled={statusMutation.isPending || !resolutionNotes.trim()}
+                      onClick={() =>
+                        statusMutation.mutate({
+                          status: "RESOLVED",
+                          notes: resolutionNotes.trim(),
+                        })
+                      }
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Mark Resolved
+                    </Button>
+                  )}
+
+                  {canCloseTicket && (
+                    <Button
+                      size="sm"
+                      className="w-full bg-slate-700 hover:bg-slate-800 text-white"
+                      disabled={statusMutation.isPending}
+                      onClick={() =>
+                        statusMutation.mutate({ status: "CLOSED" })
+                      }
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Close Ticket
+                    </Button>
+                  )}
+
+                  {canReject && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                      disabled={statusMutation.isPending}
+                      onClick={() => setRejectDialogOpen(true)}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" /> Reject Ticket
+                    </Button>
+                  )}
+                </div>
+
+                {isTechnician && !isAssignedTech && (
+                  <p className="text-xs text-slate-500">
+                    Only the assigned technician can update this ticket.
+                  </p>
+                )}
+                {isAdmin && hasTechnician && ticket.status === "IN_PROGRESS" && (
+                  <p className="text-xs text-slate-500">
+                    Waiting for the assigned technician to mark this ticket
+                    resolved before it can be closed.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {isTechnician && !isAssignedTech && !showStatusPanel && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6">
+                <p className="text-xs text-slate-500">
+                  Only the assigned technician can update this ticket.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -537,6 +750,65 @@ export default function TicketDetail() {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={rejectDialogOpen}
+        onOpenChange={(open) => {
+          setRejectDialogOpen(open);
+          if (!open) setRejectReason("");
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              Reject Ticket
+            </DialogTitle>
+            <DialogDescription>
+              The user will be notified that their ticket was rejected. Please
+              provide a clear reason.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              Reason for rejection
+            </label>
+            <Textarea
+              placeholder="e.g. Not a valid maintenance issue — please contact the helpdesk directly."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+              disabled={statusMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={!rejectReason.trim() || statusMutation.isPending}
+              onClick={() =>
+                statusMutation.mutate({
+                  status: "REJECTED",
+                  notes: rejectReason.trim(),
+                })
+              }
+            >
+              {statusMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

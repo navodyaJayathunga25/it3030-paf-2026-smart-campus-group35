@@ -9,11 +9,15 @@ import { GraduationCap, Mail, Lock, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { authService } from "@/services/authService";
+import axios from "axios";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   // Already logged in → go to dashboard
   if (isAuthenticated) {
@@ -26,9 +30,25 @@ export default function Login() {
     authService.loginWithGoogle();
   };
 
-  const handleEmailLogin = (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.info("Please use Google Sign-In for authentication.");
+    if (!email.trim() || !password) {
+      toast.error("Enter your email and password.");
+      return;
+    }
+    setEmailLoading(true);
+    try {
+      await authService.loginWithEmail({ email: email.trim(), password });
+      await refreshUser();
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.message ?? "Sign in failed."
+        : "Sign in failed.";
+      toast.error(msg);
+    } finally {
+      setEmailLoading(false);
+    }
   };
 
   return (
@@ -47,7 +67,7 @@ export default function Login() {
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
               <span className="text-xl font-bold text-slate-900">
-                smartcampus
+                SMART CAMPUS
               </span>
             </Link>
             <h2 className="text-2xl font-bold text-slate-900">Welcome Back</h2>
@@ -111,6 +131,9 @@ export default function Login() {
                   type="email"
                   placeholder="you@campus.edu"
                   className="pl-10 h-11"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
             </div>
@@ -128,24 +151,26 @@ export default function Login() {
                   type="password"
                   placeholder="••••••••"
                   className="pl-10 h-11"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
               </div>
             </div>
             <Button
               type="submit"
+              disabled={emailLoading}
               className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-md"
             >
-              Sign In
+              {emailLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
 
-          <div className="text-center mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-700 font-medium">
-              This platform uses Google OAuth 2.0 for secure authentication.
-            </p>
-          </div>
-
-          <p className="text-center text-sm text-slate-500 mt-4">
+          <p className="text-center text-sm text-slate-500 mt-6">
             Don't have an account?{" "}
             <Link
               to="/register"

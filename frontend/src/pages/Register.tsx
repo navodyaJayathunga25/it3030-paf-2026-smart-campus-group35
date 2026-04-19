@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,16 +12,76 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GraduationCap, Mail, Lock, User } from "lucide-react";
+import {
+  GraduationCap,
+  Mail,
+  Lock,
+  User,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
 import { authService } from "@/services/authService";
+import { toast } from "sonner";
+import axios from "axios";
 
 export default function Register() {
-  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [department, setDepartment] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/dashboard");
+    if (!name.trim() || !email.trim() || password.length < 8) {
+      toast.error("Please fill all fields. Password must be at least 8 characters.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await authService.register({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        department: department || undefined,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.message ?? "Registration failed. Please try again."
+        : "Registration failed. Please try again.";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white flex items-center justify-center p-6">
+        <Card className="relative w-full max-w-md border-0 shadow-2xl">
+          <CardContent className="p-8 text-center">
+            <div className="h-14 w-14 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Check your email</h2>
+            <p className="text-sm text-slate-600 mt-3 leading-relaxed">
+              We've sent a verification link to <strong>{email}</strong>. Click
+              the link to confirm your address. After that, an administrator
+              will review and approve your account before you can sign in.
+            </p>
+            <Link
+              to="/login"
+              className="inline-block mt-6 text-blue-600 font-medium hover:underline"
+            >
+              Back to Sign In
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white flex items-center justify-center p-6">
@@ -37,7 +98,7 @@ export default function Register() {
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
               <span className="text-xl font-bold text-slate-900">
-                smartcampus
+                SMART CAMPUS
               </span>
             </Link>
             <h2 className="text-2xl font-bold text-slate-900">
@@ -83,10 +144,7 @@ export default function Register() {
 
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <Label
-                htmlFor="name"
-                className="text-sm font-medium text-slate-700"
-              >
+              <Label htmlFor="name" className="text-sm font-medium text-slate-700">
                 Full Name
               </Label>
               <div className="relative">
@@ -95,14 +153,14 @@ export default function Register() {
                   id="name"
                   placeholder="John Doe"
                   className="pl-10 h-11"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-sm font-medium text-slate-700"
-              >
+              <Label htmlFor="email" className="text-sm font-medium text-slate-700">
                 University Email
               </Label>
               <div className="relative">
@@ -112,35 +170,32 @@ export default function Register() {
                   type="email"
                   placeholder="you@campus.edu"
                   className="pl-10 h-11"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label
-                htmlFor="department"
-                className="text-sm font-medium text-slate-700"
-              >
+              <Label htmlFor="department" className="text-sm font-medium text-slate-700">
                 Department
               </Label>
-              <Select>
+              <Select value={department} onValueChange={setDepartment}>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cs">Computer Science</SelectItem>
-                  <SelectItem value="physics">Physics</SelectItem>
-                  <SelectItem value="math">Mathematics</SelectItem>
-                  <SelectItem value="eng">Engineering</SelectItem>
-                  <SelectItem value="business">Business</SelectItem>
-                  <SelectItem value="arts">Arts & Humanities</SelectItem>
+                  <SelectItem value="Computer Science">Computer Science</SelectItem>
+                  <SelectItem value="Physics">Physics</SelectItem>
+                  <SelectItem value="Mathematics">Mathematics</SelectItem>
+                  <SelectItem value="Engineering">Engineering</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                  <SelectItem value="Arts & Humanities">Arts & Humanities</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label
-                htmlFor="password"
-                className="text-sm font-medium text-slate-700"
-              >
+              <Label htmlFor="password" className="text-sm font-medium text-slate-700">
                 Password
               </Label>
               <div className="relative">
@@ -148,16 +203,25 @@ export default function Register() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="At least 8 characters"
                   className="pl-10 h-11"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={8}
+                  required
                 />
               </div>
             </div>
             <Button
               type="submit"
+              disabled={loading}
               className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-md"
             >
-              Create Account
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Create Account"
+              )}
             </Button>
           </form>
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TicketStatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { ticketService } from "@/services/ticketService";
+import { formatDate } from "@/lib/date";
 import { Wrench, Plus, MapPin, Clock, ArrowRight, User, Loader2 } from "lucide-react";
 
 export default function Tickets() {
@@ -90,7 +91,7 @@ export default function Tickets() {
                     <div>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                          #{ticket.id.slice(-8).toUpperCase()} — {ticket.category}
+                          {ticket.category}
                         </h3>
                         <TicketStatusBadge status={ticket.status} />
                         <PriorityBadge priority={ticket.priority} />
@@ -103,7 +104,7 @@ export default function Tickets() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {new Date(ticket.createdAt).toLocaleDateString()}
+                          {formatDate(ticket.createdAt)}
                         </span>
                         {ticket.assignedToName && (
                           <span className="flex items-center gap-1">
