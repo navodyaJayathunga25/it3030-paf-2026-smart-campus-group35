@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { TicketStatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { ticketService } from "@/services/ticketService";
+import { formatDate } from "@/lib/date";
 import { Wrench, MapPin, Clock, ArrowRight, CheckCircle2, Play, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -94,7 +95,7 @@ export default function MyAssignedTickets() {
                     <div>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Link to={`/tickets/${ticket.id}`} className="text-sm font-semibold text-slate-900 hover:text-blue-600">
-                          #{ticket.id.slice(-8).toUpperCase()} — {ticket.category}
+                          {ticket.category}
                         </Link>
                         <TicketStatusBadge status={ticket.status} />
                         <PriorityBadge priority={ticket.priority} />
@@ -105,7 +106,7 @@ export default function MyAssignedTickets() {
                           <MapPin className="h-3 w-3" />{ticket.location}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />{new Date(ticket.createdAt).toLocaleDateString()}
+                          <Clock className="h-3 w-3" />{formatDate(ticket.createdAt)}
                         </span>
                         <span>Reported by: {ticket.userName}</span>
                       </div>

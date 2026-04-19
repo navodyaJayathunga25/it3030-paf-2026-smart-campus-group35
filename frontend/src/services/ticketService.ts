@@ -15,6 +15,7 @@ export interface TicketRequest {
   priority: TicketPriority;
   contactEmail: string;
   contactPhone?: string;
+  attachmentUrls?: string[];
 }
 
 export const ticketService = {
@@ -28,15 +29,8 @@ export const ticketService = {
     return data.data;
   },
 
-  async create(request: TicketRequest, files?: File[]): Promise<Ticket> {
-    const formData = new FormData();
-    formData.append('data', new Blob([JSON.stringify(request)], { type: 'application/json' }));
-    if (files) {
-      files.forEach((file) => formData.append('files', file));
-    }
-    const { data } = await apiClient.post<ApiResponse<Ticket>>('/tickets', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  async create(request: TicketRequest): Promise<Ticket> {
+    const { data } = await apiClient.post<ApiResponse<Ticket>>('/tickets', request);
     return data.data;
   },
 

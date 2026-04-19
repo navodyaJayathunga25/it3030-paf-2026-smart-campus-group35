@@ -1,6 +1,7 @@
 package com.smartcampus.backend.security;
 
 import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.model.UserStatus;
 import com.smartcampus.backend.repository.UserRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,6 +39,27 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new RuntimeException("User not found after OAuth2 login"));
+
+        // Treat legacy users with null status as APPROVED
+        UserStatus status = user.getStatus() == null ? UserStatus.APPROVED : user.getStatus();
+
+        if (status == UserStatus.PENDING) {
+            String pendingUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/auth/pending")
+                .queryParam("email", email)
+                .build().toUriString();
+            log.info("OAuth2 login blocked — user pending approval: {}", email);
+            getRedirectStrategy().sendRedirect(request, response, pendingUrl);
+            return;
+        }
+
+        if (status == UserStatus.REJECTED || !user.isActive()) {
+            String errorUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/auth/error")
+                .queryParam("reason", status == UserStatus.REJECTED ? "rejected" : "inactive")
+                .build().toUriString();
+            log.info("OAuth2 login blocked — user {} / active={}: {}", status, user.isActive(), email);
+            getRedirectStrategy().sendRedirect(request, response, errorUrl);
+            return;
+        }
 
         String token = jwtTokenProvider.generateToken(
             user.getId(),
