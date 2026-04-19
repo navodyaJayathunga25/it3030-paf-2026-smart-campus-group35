@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
   const [reason, setReason] = useState("");
   const [openRejectId, setOpenRejectId] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export default function AdminBookings() {
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["admin-bookings"],
-    queryFn: bookingService.getAll,
+    queryFn: bookingService.getAllForAdmin,
   });
 
   const approveMutation = useMutation({
@@ -48,11 +49,12 @@ export default function AdminBookings() {
 
   const filtered = bookings.filter((b) => {
     const matchStatus = statusFilter === "ALL" || b.status === statusFilter;
+    const matchRole = roleFilter === "ALL" || b.userRole === roleFilter;
     const matchSearch =
       b.resourceName.toLowerCase().includes(search.toLowerCase()) ||
       b.userName.toLowerCase().includes(search.toLowerCase()) ||
       b.purpose.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
+    return matchStatus && matchRole && matchSearch;
   });
 
   return (
@@ -67,6 +69,17 @@ export default function AdminBookings() {
             className="pl-10 h-11"
           />
         </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-[160px] h-11">
+            <SelectValue placeholder="User Role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Roles</SelectItem>
+            <SelectItem value="USER">User</SelectItem>
+            <SelectItem value="LECTURER">Lecturer</SelectItem>
+            <SelectItem value="TECHNICIAN">Technician</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[160px] h-11">
             <SelectValue placeholder="Status" />
@@ -103,6 +116,9 @@ export default function AdminBookings() {
                             #{booking.id.slice(-8).toUpperCase()} — {booking.resourceName}
                           </Link>
                           <BookingStatusBadge status={booking.status} />
+                          <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">
+                            {booking.userRole === "LECTURER" ? "👨‍🏫 Lecturer" : booking.userRole === "TECHNICIAN" ? "🔧 Technician" : "👤 User"}
+                          </span>
                         </div>
                         <p className="text-sm text-slate-600 mb-1">{booking.purpose}</p>
                         <div className="flex items-center gap-4 text-xs text-slate-500">
