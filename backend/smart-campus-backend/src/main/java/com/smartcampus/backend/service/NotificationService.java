@@ -70,5 +70,21 @@ public class NotificationService {
         unread.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(unread);
     }
+
+    public void deleteNotification(String notificationId, String userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+            .orElseThrow(() -> new com.smartcampus.backend.exception.ResourceNotFoundException("Notification", "id", notificationId));
+
+        if (!notification.getUserId().equals(userId)) {
+            throw new com.smartcampus.backend.exception.UnauthorizedException("You can only delete your own notifications");
+        }
+
+        if (!notification.isRead()) {
+            throw new IllegalArgumentException("Only read notifications can be deleted");
+        }
+
+        notificationRepository.delete(notification);
+        log.debug("Notification deleted for user {}: {}", userId, notificationId);
+    }
 }
 
