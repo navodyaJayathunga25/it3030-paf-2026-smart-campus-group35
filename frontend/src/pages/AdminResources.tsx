@@ -189,6 +189,15 @@ export default function AdminResources() {
     setDialogOpen(true);
   };
 
+  const getResourceDescription = (resource: Resource) => {
+    const customDescription = resource.description?.trim();
+    if (customDescription) return customDescription;
+
+    const typeLabel = getResourceTypeLabel(resource.type);
+    const capacityPart = resource.capacity ? ` with capacity for ${resource.capacity} people` : "";
+    return `${typeLabel} located at ${resource.location}${capacityPart}.`;
+  };
+
   return (
     <AppLayout title="Manage Resources" subtitle="Add, edit, and manage campus resources">
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -403,6 +412,9 @@ export default function AdminResources() {
                         <ResourceStatusBadge status={resource.status} />
                         <span className="text-xs text-slate-500">{getResourceTypeLabel(resource.type)}</span>
                       </div>
+                      <p className="text-xs text-slate-600 mb-2 max-w-2xl leading-relaxed line-clamp-2">
+                        {getResourceDescription(resource)}
+                      </p>
                       <div className="flex items-center gap-4 text-xs text-slate-500">
                         <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{resource.location}</span>
                         {resource.capacity && <span className="flex items-center gap-1"><Users className="h-3 w-3" />Cap: {resource.capacity}</span>}

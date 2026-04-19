@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminService } from "@/services/userService";
+import { bookingService } from "@/services/bookingService";
+import { resourceService } from "@/services/resourceService";
 import {
-  CalendarCheck, Wrench, Building2, Users, TrendingUp,
-  Clock, CheckCircle2, AlertTriangle, BarChart3, Loader2,
+  CalendarCheck, Building2, Users, TrendingUp,
+  Clock, CheckCircle2, AlertTriangle, BarChart3, Loader2, Trophy,
 } from "lucide-react";
 
 const peakHours = [
@@ -19,6 +21,16 @@ export default function Admin() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: adminService.getStats,
+  });
+
+  const { data: bookings = [], isLoading: isBookingsLoading } = useQuery({
+    queryKey: ["admin-bookings-summary"],
+    queryFn: bookingService.getAll,
+  });
+
+  const { data: resources = [], isLoading: isResourcesLoading } = useQuery({
+    queryKey: ["admin-resources-summary"],
+    queryFn: resourceService.getAll,
   });
 
   if (isLoading) return (
@@ -37,6 +49,28 @@ export default function Admin() {
     { label: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "from-purple-500 to-purple-600" },
     { label: "Resolved Tickets", value: stats?.resolvedTickets ?? 0, icon: TrendingUp, color: "from-indigo-500 to-indigo-600" },
   ];
+
+  const activeBookings = bookings.filter(
+    (booking) => booking.status !== "CANCELLED" && booking.status !== "REJECTED"
+  );
+
+  const bookingCountByResource = activeBookings.reduce<Record<string, number>>((acc, booking) => {
+    acc[booking.resourceId] = (acc[booking.resourceId] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const topResources = resources
+    .map((resource) => ({
+      id: resource.id,
+      name: resource.name,
+      type: resource.type.replace(/_/g, " "),
+      bookings: bookingCountByResource[resource.id] ?? 0,
+    }))
+    .filter((resource) => resource.bookings > 0)
+    .sort((a, b) => b.bookings - a.bookings)
+    .slice(0, 5);
+
+  const topResourceMaxBookings = Math.max(...topResources.map((resource) => resource.bookings), 1);
 
   return (
     <AppLayout title="Admin Dashboard" subtitle="Campus operations overview">
@@ -116,6 +150,48 @@ export default function Admin() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Top Resources Summary */}
+      <Card className="border-0 shadow-sm mb-6">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Trophy className="h-4 w-4" /> Top Resources Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(isBookingsLoading || isResourcesLoading) ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+            </div>
+          ) : topResources.length === 0 ? (
+            <p className="text-sm text-slate-500">No booking activity available yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {topResources.map((resource, index) => (
+                <div key={resource.id} className="space-y-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {index + 1}. {resource.name}
+                      </p>
+                      <p className="text-xs text-slate-500">{resource.type}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+                      {resource.bookings} bookings
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                      style={{ width: `${(resource.bookings / topResourceMaxBookings) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Service Level Timers */}
       <Card className="border-0 shadow-sm">
