@@ -14,6 +14,7 @@ import com.smartcampus.backend.repository.ResourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -30,6 +31,17 @@ public class BookingService {
             return bookingRepository.findAllByOrderByCreatedAtDesc();
         }
         return bookingRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId());
+    }
+
+    public List<Booking> getAllBookingsForAdmin() {
+        return bookingRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    public List<Booking> getApprovedBookingsForDate(String resourceId, LocalDate date, User currentUser) {
+        resourceRepository.findById(resourceId)
+            .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", resourceId));
+
+        return bookingRepository.findByResourceIdAndDateAndStatus(resourceId, date, BookingStatus.APPROVED);
     }
 
     public Booking getBookingById(String id, User currentUser) {
@@ -73,6 +85,7 @@ public class BookingService {
         Booking booking = Booking.builder()
             .userId(currentUser.getId())
             .userName(currentUser.getName())
+            .userRole(currentUser.getRole().name())
             .resourceId(resource.getId())
             .resourceName(resource.getName())
             .date(request.getDate())
