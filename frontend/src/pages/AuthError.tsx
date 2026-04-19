@@ -56,7 +56,7 @@ export default function AuthErrorPage() {
           {/* Error description */}
           <p className="text-base text-muted-foreground">{errorMessage}</p>
 
-          {/* Countdown提示 */}
+          {/* Countdown */}
           <div className="pt-2">
             <p className="text-sm text-gray-500">
               {countdown > 0 ? (

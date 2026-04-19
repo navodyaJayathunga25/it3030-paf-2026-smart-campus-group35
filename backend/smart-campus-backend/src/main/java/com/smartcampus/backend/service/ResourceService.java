@@ -52,12 +52,11 @@ public class ResourceService {
             .type(request.getType())
             .capacity(request.getCapacity())
             .location(request.getLocation())
-            .building(request.getBuilding())
-            .floor(request.getFloor())
             .description(request.getDescription())
-            .status(request.getStatus() != null ? request.getStatus() : ResourceStatus.ACTIVE)
-            .amenities(request.getAmenities())
+            .status(request.getStatus())
+            .facilities(request.getFacilities())
             .availabilityWindows(request.getAvailabilityWindows())
+            .allowedRoles(request.getAllowedRoles())
             .build();
         return resourceRepository.save(resource);
     }
@@ -68,14 +67,11 @@ public class ResourceService {
         resource.setType(request.getType());
         resource.setCapacity(request.getCapacity());
         resource.setLocation(request.getLocation());
-        resource.setBuilding(request.getBuilding());
-        resource.setFloor(request.getFloor());
         resource.setDescription(request.getDescription());
-        if (request.getStatus() != null) {
-            resource.setStatus(request.getStatus());
-        }
-        resource.setAmenities(request.getAmenities());
+        resource.setStatus(request.getStatus());
+        resource.setFacilities(request.getFacilities());
         resource.setAvailabilityWindows(request.getAvailabilityWindows());
+        resource.setAllowedRoles(request.getAllowedRoles());
         return resourceRepository.save(resource);
     }
 
@@ -83,5 +79,17 @@ public class ResourceService {
         Resource resource = getResourceById(id);
         resourceRepository.delete(resource);
     }
-}
 
+    /**
+     * Filter resources accessible by a specific user role.
+     * If allowedRoles is null/empty, the resource is accessible to all.
+     */
+    public List<Resource> getResourcesByRole(List<Resource> resources, String userRole) {
+        if (userRole == null) {
+            return resources;
+        }
+        return resources.stream()
+            .filter(r -> r.getAllowedRoles() == null || r.getAllowedRoles().isEmpty() || r.getAllowedRoles().contains(userRole))
+            .toList();
+    }
+}

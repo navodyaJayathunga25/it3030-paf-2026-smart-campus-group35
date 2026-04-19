@@ -15,9 +15,7 @@ import com.smartcampus.backend.repository.TicketRepository;
 import com.smartcampus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +28,7 @@ public class TicketService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
-    private final FileStorageService fileStorageService;
+    private final EmailService emailService;
 
     public List<Ticket> getTicketsForUser(User currentUser) {
         return switch (currentUser.getRole()) {
@@ -51,19 +49,13 @@ public class TicketService {
         return ticket;
     }
 
-    public Ticket createTicket(TicketRequest request, List<MultipartFile> files, User currentUser) throws IOException {
-        List<String> attachmentUrls = new ArrayList<>();
+    public Ticket createTicket(TicketRequest request, User currentUser) {
+        List<String> attachmentUrls = request.getAttachmentUrls() != null
+            ? new ArrayList<>(request.getAttachmentUrls())
+            : new ArrayList<>();
 
-        if (files != null && !files.isEmpty()) {
-            if (files.size() > 3) {
-                throw new IllegalArgumentException("Maximum 3 attachments are allowed");
-            }
-            for (MultipartFile file : files) {
-                if (!file.isEmpty()) {
-                    String url = fileStorageService.storeFile(file);
-                    attachmentUrls.add(url);
-                }
-            }
+        if (attachmentUrls.size() > 3) {
+            throw new IllegalArgumentException("Maximum 3 attachments are allowed");
         }
 
         Ticket ticket = Ticket.builder()
@@ -80,7 +72,20 @@ public class TicketService {
             .attachmentUrls(attachmentUrls)
             .build();
 
-        return ticketRepository.save(ticket);
+        Ticket saved = ticketRepository.save(ticket);
+
+        String recipient = (ticket.getContactEmail() != null && !ticket.getContactEmail().isBlank())
+            ? ticket.getContactEmail()
+            : currentUser.getEmail();
+        emailService.sendTicketReceivedEmail(
+            recipient,
+            currentUser.getName(),
+            saved.getId(),
+            saved.getCategory(),
+            saved.getDescription()
+        );
+
+        return saved;
     }
 
     public Ticket updateTicketStatus(String ticketId, TicketStatusRequest request, User currentUser) {
@@ -88,10 +93,43 @@ public class TicketService {
             .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
 
         TicketStatus newStatus = request.getStatus();
+        TicketStatus currentStatus = ticket.getStatus();
+        String role = currentUser.getRole().name();
 
         // Role-based status transitions
-        if (currentUser.getRole().name().equals("USER")) {
+        if (role.equals("USER")) {
             throw new UnauthorizedException("Users cannot change ticket status");
+        }
+
+        if (role.equals("ADMIN")) {
+            boolean hasTechnician = ticket.getAssignedTo() != null
+                && !ticket.getAssignedTo().isBlank();
+            if (hasTechnician) {
+                // Once a technician is assigned, admin may only reject an OPEN ticket
+                // or close a RESOLVED ticket. The technician owns start/resolve.
+                boolean canReject = newStatus == TicketStatus.REJECTED && currentStatus == TicketStatus.OPEN;
+                boolean canClose  = newStatus == TicketStatus.CLOSED && currentStatus == TicketStatus.RESOLVED;
+                if (!canReject && !canClose) {
+                    throw new UnauthorizedException(
+                        "A technician is already assigned. Admin can only reject or close this ticket; "
+                        + "starting work and resolving are the assigned technician's responsibility."
+                    );
+                }
+            }
+            // If no technician is assigned, admin may drive any transition.
+        } else if (role.equals("TECHNICIAN")) {
+            // Technician must be the one assigned.
+            if (ticket.getAssignedTo() == null
+                || !ticket.getAssignedTo().equals(currentUser.getId())) {
+                throw new UnauthorizedException("You are not the assigned technician for this ticket");
+            }
+            // Technician may move to IN_PROGRESS or RESOLVED only.
+            if (newStatus != TicketStatus.IN_PROGRESS && newStatus != TicketStatus.RESOLVED) {
+                throw new UnauthorizedException(
+                    "Technicians can only start work or mark a ticket as resolved. "
+                    + "Closing the ticket is reserved for admins."
+                );
+            }
         }
 
         // Track first response time
@@ -118,16 +156,47 @@ public class TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
 
-        notificationService.sendNotification(
-            ticket.getUserId(),
-            NotificationType.TICKET,
-            "Ticket Status Updated",
-            "Your ticket has been updated to: " + newStatus.name(),
-            ticket.getId(),
-            "/tickets/" + ticket.getId()
-        );
+        if (newStatus == TicketStatus.RESOLVED) {
+            notificationService.sendNotification(
+                ticket.getUserId(),
+                NotificationType.TICKET,
+                "Ticket Resolved",
+                "Your ticket \"" + ticket.getCategory() + "\" has been resolved.",
+                ticket.getId(),
+                "/tickets/" + ticket.getId()
+            );
+        }
+
+        if (newStatus == TicketStatus.RESOLVED || newStatus == TicketStatus.CLOSED
+            || newStatus == TicketStatus.REJECTED) {
+            String recipient = resolveRecipientEmail(saved);
+            if (recipient != null && !recipient.isBlank()) {
+                String recipientName = saved.getUserName() != null ? saved.getUserName() : "there";
+                if (newStatus == TicketStatus.REJECTED) {
+                    emailService.sendTicketRejectedEmail(
+                        recipient, recipientName, saved.getId(),
+                        saved.getCategory(), saved.getRejectionReason()
+                    );
+                } else {
+                    emailService.sendTicketResolvedEmail(
+                        recipient, recipientName, saved.getId(),
+                        saved.getCategory(), saved.getResolutionNotes(),
+                        newStatus == TicketStatus.CLOSED
+                    );
+                }
+            }
+        }
 
         return saved;
+    }
+
+    private String resolveRecipientEmail(Ticket ticket) {
+        if (ticket.getContactEmail() != null && !ticket.getContactEmail().isBlank()) {
+            return ticket.getContactEmail();
+        }
+        return userRepository.findById(ticket.getUserId())
+            .map(User::getEmail)
+            .orElse(null);
     }
 
     public Ticket assignTicket(String ticketId, String technicianId, User admin) {
@@ -149,10 +218,11 @@ public class TicketService {
         Ticket saved = ticketRepository.save(ticket);
 
         notificationService.sendNotification(
-            ticket.getUserId(),
+            technician.getId(),
             NotificationType.TICKET,
-            "Ticket Assigned",
-            "Your ticket has been assigned to " + technician.getName(),
+            "New Ticket Assigned",
+            "You have been assigned a new ticket: \"" + ticket.getCategory()
+                + "\" (Priority: " + ticket.getPriority().name() + ")",
             ticket.getId(),
             "/tickets/" + ticket.getId()
         );

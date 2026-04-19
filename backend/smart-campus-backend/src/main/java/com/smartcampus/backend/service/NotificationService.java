@@ -2,7 +2,10 @@ package com.smartcampus.backend.service;
 
 import com.smartcampus.backend.model.Notification;
 import com.smartcampus.backend.model.Notification.NotificationType;
+import com.smartcampus.backend.model.User;
+import com.smartcampus.backend.model.UserRole;
 import com.smartcampus.backend.repository.NotificationRepository;
+import com.smartcampus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,16 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+
+    public void notifyAdmins(NotificationType type, String title, String message,
+                              String referenceId, String link) {
+        List<User> admins = userRepository.findByRole(UserRole.ADMIN);
+        for (User admin : admins) {
+            sendNotification(admin.getId(), type, title, message, referenceId, link);
+        }
+        log.debug("Notified {} admin(s): {}", admins.size(), title);
+    }
 
     public void sendNotification(String userId, NotificationType type,
                                   String title, String message,

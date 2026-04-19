@@ -46,6 +46,28 @@ public class UserController {
     }
 
     /**
+     * PUT /api/users/me/picture - Update own profile picture (any authenticated user)
+     * Body: { "picture": "data:image/png;base64,...." }
+     */
+    @PutMapping("/me/picture")
+    public ResponseEntity<ApiResponse<UserResponse>> updateMyPicture(
+        @AuthenticationPrincipal User currentUser,
+        @RequestBody Map<String, String> body) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated"));
+        }
+        String picture = body.get("picture");
+        if (picture != null && picture.length() > 2_000_000) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Image is too large. Please choose a smaller file."));
+        }
+        return ResponseEntity.ok(
+            ApiResponse.success("Profile picture updated",
+                userService.updateUserPicture(currentUser.getId(), picture))
+        );
+    }
+
+    /**
      * PUT /api/users/{id}/role - Update user role (ADMIN only)
      */
     @PutMapping("/{id}/role")
@@ -70,6 +92,40 @@ public class UserController {
         boolean active = body.get("active");
         return ResponseEntity.ok(
             ApiResponse.success("User status updated", userService.updateUserStatus(id, active))
+        );
+    }
+
+    /**
+     * GET /api/users/pending - List users pending admin approval (ADMIN only)
+     */
+    @GetMapping("/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getPendingUsers() {
+        return ResponseEntity.ok(ApiResponse.success(userService.getPendingUsers()));
+    }
+
+    /**
+     * PUT /api/users/{id}/approve - Approve pending user and assign role (ADMIN only)
+     */
+    @PutMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> approveUser(
+        @PathVariable String id,
+        @RequestBody Map<String, String> body) {
+        UserRole role = UserRole.valueOf(body.getOrDefault("role", "USER"));
+        return ResponseEntity.ok(
+            ApiResponse.success("User approved", userService.approveUser(id, role))
+        );
+    }
+
+    /**
+     * PUT /api/users/{id}/reject - Reject a pending user (ADMIN only)
+     */
+    @PutMapping("/{id}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> rejectUser(@PathVariable String id) {
+        return ResponseEntity.ok(
+            ApiResponse.success("User rejected", userService.rejectUser(id))
         );
     }
 }
