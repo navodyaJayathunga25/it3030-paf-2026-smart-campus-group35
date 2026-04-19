@@ -50,7 +50,9 @@ export default function ResourceDetail() {
   }
 
   const resourceBookings = allBookings.filter(
-    (b) => b.resourceId === resource.id && b.status === "APPROVED"
+    (b) =>
+      b.resourceId === resource.id &&
+      (b.status === "APPROVED" || b.status === "PENDING")
   );
 
   // Build a 7-day x (08:00-20:00) availability grid starting from today.

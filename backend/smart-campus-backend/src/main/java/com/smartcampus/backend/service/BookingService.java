@@ -41,7 +41,10 @@ public class BookingService {
         resourceRepository.findById(resourceId)
             .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", resourceId));
 
-        return bookingRepository.findByResourceIdAndDateAndStatus(resourceId, date, BookingStatus.APPROVED);
+        // Return active bookings (PENDING + APPROVED) so the UI marks pending
+        // slots as unavailable. REJECTED/CANCELLED are excluded so those slots
+        // free up again automatically.
+        return bookingRepository.findActiveByResourceIdAndDate(resourceId, date);
     }
 
     public Booking getBookingById(String id, User currentUser) {
