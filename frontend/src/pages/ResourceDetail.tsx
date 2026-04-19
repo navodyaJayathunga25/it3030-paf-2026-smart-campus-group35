@@ -66,7 +66,12 @@ export default function ResourceDetail() {
   });
   const dayLabel = (d: Date) =>
     d.toLocaleDateString(undefined, { weekday: "short" }).toUpperCase();
-  const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+  const dayKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  };
 
   const parseHour = (t: string) => parseInt(t.split(":")[0], 10);
   const availabilityWindows = parseAvailabilityWindows(resource.availabilityWindows);
