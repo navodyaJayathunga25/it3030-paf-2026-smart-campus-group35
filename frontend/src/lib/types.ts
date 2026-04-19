@@ -40,6 +40,7 @@ export interface Booking {
   id: string;
   userId: string;
   userName: string;
+  userRole: UserRole;
   resourceId: string;
   resourceName: string;
   date: string;
