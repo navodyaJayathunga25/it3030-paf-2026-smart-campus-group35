@@ -181,6 +181,7 @@ export default function AdminBookings() {
                         </Dialog>
                       </div>
                     )}
+
                   </div>
                 </CardContent>
               </Card>
