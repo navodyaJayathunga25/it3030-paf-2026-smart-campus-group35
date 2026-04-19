@@ -6,13 +6,13 @@ import { atoms } from '@metagptx/web-sdk/plugins';
 
 process.env.VITE_APP_TITLE ??= process.env.OVERVIEW_TITLE ?? 'Smart Campus';
 process.env.VITE_APP_DESCRIPTION ??= process.env.OVERVIEW_DESCRIPTION ?? 'Atoms Generated Project';
-process.env.VITE_APP_LOGO_URL ??= process.env.OVERVIEW_LOGO_URL ?? 'https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico';
+process.env.VITE_APP_LOGO_URL ??= process.env.OVERVIEW_LOGO_URL ?? '/favicon.svg';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
     viteSourceLocator({
-      prefix: 'mgx', // 前缀用于标识源代码位置，不能修改
+      prefix: 'mgx', // Prefix used to identify source code locations, do not modify
     }),
     react(),
     atoms(),
