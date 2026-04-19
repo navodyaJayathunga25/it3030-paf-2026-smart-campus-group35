@@ -110,7 +110,7 @@ export default function Landing() {
               <GraduationCap className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-bold text-slate-900">
-              smartcampus
+              SMART CAMPUS
             </span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
@@ -482,7 +482,7 @@ export default function Landing() {
                 <GraduationCap className="h-4 w-4 text-white" />
               </div>
               <span className="text-sm font-semibold text-white">
-                smartcampus
+                SMART CAMPUS
               </span>
             </div>
             <p className="text-sm">

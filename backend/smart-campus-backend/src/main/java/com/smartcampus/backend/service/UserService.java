@@ -67,6 +67,13 @@ public class UserService {
         return toResponse(saved);
     }
 
+    public UserResponse updateUserPicture(String userId, String picture) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        user.setPicture(picture);
+        return toResponse(userRepository.save(user));
+    }
+
     public UserResponse rejectUser(String userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));

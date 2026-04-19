@@ -21,6 +21,9 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
 
     List<Booking> findByResourceIdAndDateAndStatus(String resourceId, LocalDate date, BookingStatus status);
 
+    @Query("{ 'resourceId': ?0, 'date': ?1, 'status': { $in: ['PENDING', 'APPROVED'] } }")
+    List<Booking> findActiveByResourceIdAndDate(String resourceId, LocalDate date);
+
     // Check for overlapping bookings (conflict detection)
     @Query("{ 'resourceId': ?0, 'date': ?1, 'status': { $in: ['PENDING', 'APPROVED'] }, " +
            "$or: [ " +
@@ -30,4 +33,6 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
                                            LocalTime startTime, LocalTime endTime);
 
     long countByUserIdAndStatus(String userId, BookingStatus status);
+
+    long countByStatus(BookingStatus status);
 }
