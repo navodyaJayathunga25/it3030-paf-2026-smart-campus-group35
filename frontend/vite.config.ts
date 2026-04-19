@@ -12,7 +12,7 @@ process.env.VITE_APP_LOGO_URL ??= process.env.OVERVIEW_LOGO_URL ?? '/favicon.svg
 export default defineConfig(({ mode }) => ({
   plugins: [
     viteSourceLocator({
-      prefix: 'mgx', // 前缀用于标识源代码位置，不能修改
+      prefix: 'mgx', // Prefix used to identify source code locations, do not modify
     }),
     react(),
     atoms(),
