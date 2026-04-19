@@ -8,6 +8,7 @@ import { ResourceStatusBadge } from "@/components/StatusBadge";
 import { resourceService } from "@/services/resourceService";
 import { bookingService } from "@/services/bookingService";
 import { getResourceTypeIcon, getResourceTypeLabel } from "@/lib/types";
+import { parseAvailabilityWindows, isWithinAvailability } from "@/lib/utils";
 import { MapPin, Users, Clock, ArrowLeft, CalendarPlus, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 export default function ResourceDetail() {
@@ -66,6 +67,9 @@ export default function ResourceDetail() {
   const dayKey = (d: Date) => d.toISOString().slice(0, 10);
 
   const parseHour = (t: string) => parseInt(t.split(":")[0], 10);
+  const availabilityWindows = parseAvailabilityWindows(resource.availabilityWindows);
+  const isUnavailable = (d: Date, hour: number) =>
+    !isWithinAvailability(availabilityWindows, d.getDay(), hour * 60, (hour + 1) * 60);
   const isBooked = (d: Date, hour: number) => {
     const key = dayKey(d);
     return resourceBookings.some((b) => {
@@ -155,17 +159,20 @@ export default function ResourceDetail() {
                       {h.toString().padStart(2, "0")}:00
                     </div>
                     {weekDays.map((d) => {
-                      const booked = isBooked(d, h);
+                      const unavailable = isUnavailable(d, h);
+                      const booked = !unavailable && isBooked(d, h);
                       return (
                         <div
                           key={d.toISOString() + h}
                           className={`text-[11px] text-center py-1.5 rounded border ${
-                            booked
+                            unavailable
+                              ? "bg-slate-100 text-slate-400 border-slate-200"
+                              : booked
                               ? "bg-red-50 text-red-700 border-red-200"
                               : "bg-emerald-50 text-emerald-700 border-emerald-200"
                           }`}
                         >
-                          {booked ? "Booked" : "Free"}
+                          {unavailable ? "—" : booked ? "Booked" : "Free"}
                         </div>
                       );
                     })}

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { resourceService } from "@/services/resourceService";
 import { bookingService } from "@/services/bookingService";
 import { timeSlots } from "@/lib/types";
+import { parseAvailabilityWindows, isWithinAvailability } from "@/lib/utils";
 import { ArrowLeft, CalendarPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,10 +22,20 @@ export default function BookingCreate() {
 
   const [selectedResource, setSelectedResource] = useState(preselectedResourceId);
   const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [selectedSlotIndexes, setSelectedSlotIndexes] = useState<number[]>([]);
   const [purpose, setPurpose] = useState("");
   const [attendees, setAttendees] = useState("1");
+
+  const slotIntervals = useMemo(
+    () =>
+      timeSlots.slice(0, -1).map((start, index) => ({
+        index,
+        start,
+        end: timeSlots[index + 1],
+        label: `${start} - ${timeSlots[index + 1]}`,
+      })),
+    []
+  );
 
   const minBookDateStr = useMemo(() => {
     const t = new Date();
@@ -60,16 +71,63 @@ export default function BookingCreate() {
     return occupied;
   }, [approvedBookings]);
 
-  const hasConflict = useMemo(() => {
-    if (!startTime || !endTime) return false;
-    const s = timeSlots.indexOf(startTime);
-    const e = timeSlots.indexOf(endTime);
-    if (s === -1 || e === -1 || e <= s) return false;
-    for (let i = s; i < e; i += 1) if (occupiedSlotIndexes.has(i)) return true;
-    return false;
-  }, [startTime, endTime, occupiedSlotIndexes]);
+  const sortedSelectedSlots = useMemo(
+    () => [...selectedSlotIndexes].sort((a, b) => a - b),
+    [selectedSlotIndexes]
+  );
+
+  const isSlotSelectionContiguous = useMemo(() => {
+    if (sortedSelectedSlots.length === 0) return false;
+    for (let i = 1; i < sortedSelectedSlots.length; i += 1) {
+      if (sortedSelectedSlots[i] !== sortedSelectedSlots[i - 1] + 1) return false;
+    }
+    return true;
+  }, [sortedSelectedSlots]);
+
+  const startTime =
+    sortedSelectedSlots.length > 0 && isSlotSelectionContiguous
+      ? timeSlots[sortedSelectedSlots[0]]
+      : "";
+  const endTime =
+    sortedSelectedSlots.length > 0 && isSlotSelectionContiguous
+      ? timeSlots[sortedSelectedSlots[sortedSelectedSlots.length - 1] + 1]
+      : "";
+
+  const toggleSlotSelection = (slotIndex: number) => {
+    if (occupiedSlotIndexes.has(slotIndex)) return;
+    if (unavailableSlotIndexes.has(slotIndex)) return;
+    setSelectedSlotIndexes((current) =>
+      current.includes(slotIndex)
+        ? current.filter((i) => i !== slotIndex)
+        : [...current, slotIndex]
+    );
+  };
 
   const selectedResourceObj = resources.find((r) => r.id === selectedResource);
+
+  const availabilityWindows = useMemo(
+    () => parseAvailabilityWindows(selectedResourceObj?.availabilityWindows),
+    [selectedResourceObj]
+  );
+
+  const toMin = (t: string) => {
+    const [h, m] = t.split(":").map((x) => parseInt(x, 10));
+    return h * 60 + m;
+  };
+
+  const selectedWeekday = date ? new Date(`${date}T00:00:00`).getDay() : -1;
+
+  const unavailableSlotIndexes = useMemo(() => {
+    const unavailable = new Set<number>();
+    if (!date) return unavailable;
+    timeSlots.slice(0, -1).forEach((start, index) => {
+      const end = timeSlots[index + 1];
+      if (!isWithinAvailability(availabilityWindows, selectedWeekday, toMin(start), toMin(end))) {
+        unavailable.add(index);
+      }
+    });
+    return unavailable;
+  }, [availabilityWindows, selectedWeekday, date]);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -95,12 +153,12 @@ export default function BookingCreate() {
       toast.error("Please fill in all required fields");
       return;
     }
-    if (startTime >= endTime) {
-      toast.error("End time must be after start time");
+    if (!isSlotSelectionContiguous) {
+      toast.error("Please select continuous time slots");
       return;
     }
-    if (hasConflict) {
-      toast.error("Selected time overlaps an existing booking");
+    if (startTime >= endTime) {
+      toast.error("End time must be after start time");
       return;
     }
     mutation.mutate();
@@ -112,8 +170,7 @@ export default function BookingCreate() {
     !!startTime &&
     !!endTime &&
     !!purpose &&
-    startTime < endTime &&
-    !hasConflict &&
+    isSlotSelectionContiguous &&
     !mutation.isPending;
 
   return (
@@ -129,7 +186,14 @@ export default function BookingCreate() {
             <Card className="border-0 shadow-sm">
               <CardContent className="p-6 space-y-2">
                 <Label className="text-sm font-semibold text-slate-900">Select Resource</Label>
-                <Select value={selectedResource} onValueChange={setSelectedResource}>
+                <Select
+                  value={selectedResource}
+                  onValueChange={(v) => {
+                    setSelectedResource(v);
+                    setDate("");
+                    setSelectedSlotIndexes([]);
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a resource" />
                   </SelectTrigger>
@@ -148,7 +212,7 @@ export default function BookingCreate() {
               <CardContent className="p-6 space-y-5">
                 <h3 className="text-sm font-semibold text-slate-900">Booking Details</h3>
 
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-[220px,1fr] gap-6">
                   <div className="space-y-2">
                     <Label>Date</Label>
                     <Input
@@ -156,48 +220,68 @@ export default function BookingCreate() {
                       value={date}
                       min={minBookDateStr}
                       max={maxBookDateStr}
-                      onChange={(e) => setDate(e.target.value)}
+                      onChange={(e) => {
+                        setDate(e.target.value);
+                        setSelectedSlotIndexes([]);
+                      }}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Start Time</Label>
-                    <Select value={startTime} onValueChange={setStartTime}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Start" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeSlots.slice(0, -1).map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>End Time</Label>
-                    <Select value={endTime} onValueChange={setEndTime}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="End" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeSlots
-                          .filter((t) => !startTime || t > startTime)
-                          .map((t) => (
-                            <SelectItem key={t} value={t}>
-                              {t}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                {hasConflict && (
-                  <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                    Selected time overlaps an existing approved booking.
-                  </p>
-                )}
+                  {selectedResource && date && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Available Time Slots *</Label>
+                        <span className="text-xs text-slate-500">{date}</span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {slotIntervals.map((slot) => {
+                          const isUnavailable = unavailableSlotIndexes.has(slot.index);
+                          const isOccupied = !isUnavailable && occupiedSlotIndexes.has(slot.index);
+                          const isSelected = selectedSlotIndexes.includes(slot.index);
+                          return (
+                            <button
+                              key={slot.index}
+                              type="button"
+                              onClick={() => toggleSlotSelection(slot.index)}
+                              disabled={isOccupied || isUnavailable}
+                              className={`h-11 rounded-md border text-xs md:text-sm transition-colors ${
+                                isUnavailable
+                                  ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                                  : isOccupied
+                                  ? "border-red-400 bg-red-500 text-white cursor-not-allowed"
+                                  : isSelected
+                                  ? "border-blue-500 bg-blue-600 text-white"
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50"
+                              }`}
+                            >
+                              {isUnavailable
+                                ? `${slot.label} (Closed)`
+                                : isOccupied
+                                ? `${slot.label} (Booked)`
+                                : slot.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> Selected
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Booked
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2.5 w-2.5 rounded-full bg-slate-300" /> Closed
+                        </span>
+                      </div>
+                      {selectedSlotIndexes.length > 0 && !isSlotSelectionContiguous && (
+                        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                          Please select continuous slots only.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <div className="space-y-2">
                   <Label>Purpose</Label>
