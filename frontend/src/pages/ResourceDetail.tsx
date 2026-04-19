@@ -52,6 +52,30 @@ export default function ResourceDetail() {
     (b) => b.resourceId === resource.id && b.status === "APPROVED"
   );
 
+  // Build a 7-day x (08:00-20:00) availability grid starting from today.
+  const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8..20
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    return d;
+  });
+  const dayLabel = (d: Date) =>
+    d.toLocaleDateString(undefined, { weekday: "short" }).toUpperCase();
+  const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+
+  const parseHour = (t: string) => parseInt(t.split(":")[0], 10);
+  const isBooked = (d: Date, hour: number) => {
+    const key = dayKey(d);
+    return resourceBookings.some((b) => {
+      if (b.date !== key) return false;
+      const sh = parseHour(b.startTime);
+      const eh = parseHour(b.endTime);
+      return hour >= sh && hour < eh;
+    });
+  };
+
   return (
     <AppLayout title={resource.name} subtitle={getResourceTypeLabel(resource.type)}>
       <Button variant="ghost" className="mb-4 text-slate-600" onClick={() => navigate(-1)}>
@@ -96,6 +120,57 @@ export default function ResourceDetail() {
                     <span>{resource.availabilityWindows}</span>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Weekly Availability */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Weekly Availability</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <div className="min-w-[640px]">
+                <div
+                  className="grid gap-1 mb-1"
+                  style={{ gridTemplateColumns: `64px repeat(7, minmax(0, 1fr))` }}
+                >
+                  <div />
+                  {weekDays.map((d) => (
+                    <div
+                      key={d.toISOString()}
+                      className="text-center text-xs font-medium text-slate-500 py-1"
+                    >
+                      {dayLabel(d)}
+                    </div>
+                  ))}
+                </div>
+                {HOURS.map((h) => (
+                  <div
+                    key={h}
+                    className="grid gap-1 mb-1"
+                    style={{ gridTemplateColumns: `64px repeat(7, minmax(0, 1fr))` }}
+                  >
+                    <div className="text-xs text-slate-500 flex items-center">
+                      {h.toString().padStart(2, "0")}:00
+                    </div>
+                    {weekDays.map((d) => {
+                      const booked = isBooked(d, h);
+                      return (
+                        <div
+                          key={d.toISOString() + h}
+                          className={`text-[11px] text-center py-1.5 rounded border ${
+                            booked
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          }`}
+                        >
+                          {booked ? "Booked" : "Free"}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
