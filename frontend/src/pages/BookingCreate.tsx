@@ -60,11 +60,13 @@ export default function BookingCreate() {
     enabled: !!selectedResource && !!date,
   });
 
+  const normalizeTime = (t: string) => (t ? t.slice(0, 5) : t); // "08:00:00" -> "08:00"
+
   const occupiedSlotIndexes = useMemo(() => {
     const occupied = new Set<number>();
     approvedBookings.forEach((b) => {
-      const s = timeSlots.indexOf(b.startTime);
-      const e = timeSlots.indexOf(b.endTime);
+      const s = timeSlots.indexOf(normalizeTime(b.startTime));
+      const e = timeSlots.indexOf(normalizeTime(b.endTime));
       if (s === -1 || e === -1 || e <= s) return;
       for (let i = s; i < e; i += 1) occupied.add(i);
     });
