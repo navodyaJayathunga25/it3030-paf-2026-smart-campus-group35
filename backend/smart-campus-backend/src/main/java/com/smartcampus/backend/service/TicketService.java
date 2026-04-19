@@ -93,10 +93,43 @@ public class TicketService {
             .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
 
         TicketStatus newStatus = request.getStatus();
+        TicketStatus currentStatus = ticket.getStatus();
+        String role = currentUser.getRole().name();
 
         // Role-based status transitions
-        if (currentUser.getRole().name().equals("USER")) {
+        if (role.equals("USER")) {
             throw new UnauthorizedException("Users cannot change ticket status");
+        }
+
+        if (role.equals("ADMIN")) {
+            boolean hasTechnician = ticket.getAssignedTo() != null
+                && !ticket.getAssignedTo().isBlank();
+            if (hasTechnician) {
+                // Once a technician is assigned, admin may only reject an OPEN ticket
+                // or close a RESOLVED ticket. The technician owns start/resolve.
+                boolean canReject = newStatus == TicketStatus.REJECTED && currentStatus == TicketStatus.OPEN;
+                boolean canClose  = newStatus == TicketStatus.CLOSED && currentStatus == TicketStatus.RESOLVED;
+                if (!canReject && !canClose) {
+                    throw new UnauthorizedException(
+                        "A technician is already assigned. Admin can only reject or close this ticket; "
+                        + "starting work and resolving are the assigned technician's responsibility."
+                    );
+                }
+            }
+            // If no technician is assigned, admin may drive any transition.
+        } else if (role.equals("TECHNICIAN")) {
+            // Technician must be the one assigned.
+            if (ticket.getAssignedTo() == null
+                || !ticket.getAssignedTo().equals(currentUser.getId())) {
+                throw new UnauthorizedException("You are not the assigned technician for this ticket");
+            }
+            // Technician may move to IN_PROGRESS or RESOLVED only.
+            if (newStatus != TicketStatus.IN_PROGRESS && newStatus != TicketStatus.RESOLVED) {
+                throw new UnauthorizedException(
+                    "Technicians can only start work or mark a ticket as resolved. "
+                    + "Closing the ticket is reserved for admins."
+                );
+            }
         }
 
         // Track first response time

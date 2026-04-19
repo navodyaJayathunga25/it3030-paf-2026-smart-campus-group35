@@ -60,7 +60,6 @@ export default function TicketDetail() {
 
   const isAdmin = user?.role === "ADMIN";
   const isTechnician = user?.role === "TECHNICIAN";
-  const canManage = isAdmin || isTechnician;
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: ["ticket", id],
@@ -169,6 +168,20 @@ export default function TicketDetail() {
 
   const currentStepIdx = statusSteps.indexOf(ticket.status);
   const shortId = ticket.id.slice(-8).toUpperCase();
+
+  const hasTechnician = !!ticket.assignedTo;
+  const isAssignedTech =
+    isTechnician && hasTechnician && ticket.assignedTo === user?.id;
+  // Admin may drive start/resolve only while no technician is assigned.
+  const adminUnassigned = isAdmin && !hasTechnician;
+  const canStartWork =
+    (isAssignedTech || adminUnassigned) && ticket.status === "OPEN";
+  const canResolve =
+    (isAssignedTech || adminUnassigned) && ticket.status === "IN_PROGRESS";
+  const canCloseTicket = isAdmin && ticket.status === "RESOLVED";
+  const canReject = isAdmin && ticket.status === "OPEN";
+  const showStatusPanel =
+    canStartWork || canResolve || canCloseTicket || canReject;
 
   const handleAddComment = () => {
     if (!newComment.trim()) return;
@@ -599,7 +612,7 @@ export default function TicketDetail() {
           )}
 
           {/* Admin / Technician: status actions */}
-          {canManage && ticket.status !== "CLOSED" && ticket.status !== "REJECTED" && (
+          {showStatusPanel && (
             <Card className="border-0 shadow-sm">
               <CardContent className="p-6 space-y-3">
                 <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
@@ -607,13 +620,9 @@ export default function TicketDetail() {
                   Update Status
                 </h3>
 
-                {(ticket.status === "RESOLVED" || ticket.status === "IN_PROGRESS") && (
+                {canResolve && (
                   <Textarea
-                    placeholder={
-                      ticket.status === "IN_PROGRESS"
-                        ? "Resolution notes (required to resolve)..."
-                        : "Optional notes..."
-                    }
+                    placeholder="Resolution notes (required to resolve)..."
                     value={resolutionNotes}
                     onChange={(e) => setResolutionNotes(e.target.value)}
                     rows={2}
@@ -622,7 +631,7 @@ export default function TicketDetail() {
                 )}
 
                 <div className="flex flex-col gap-2">
-                  {ticket.status === "OPEN" && (
+                  {canStartWork && (
                     <Button
                       size="sm"
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -635,7 +644,7 @@ export default function TicketDetail() {
                     </Button>
                   )}
 
-                  {ticket.status === "IN_PROGRESS" && (
+                  {canResolve && (
                     <Button
                       size="sm"
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -651,23 +660,20 @@ export default function TicketDetail() {
                     </Button>
                   )}
 
-                  {ticket.status === "RESOLVED" && (
+                  {canCloseTicket && (
                     <Button
                       size="sm"
                       className="w-full bg-slate-700 hover:bg-slate-800 text-white"
                       disabled={statusMutation.isPending}
                       onClick={() =>
-                        statusMutation.mutate({
-                          status: "CLOSED",
-                          notes: resolutionNotes.trim() || undefined,
-                        })
+                        statusMutation.mutate({ status: "CLOSED" })
                       }
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" /> Close Ticket
                     </Button>
                   )}
 
-                  {isAdmin && ticket.status === "OPEN" && (
+                  {canReject && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -679,6 +685,28 @@ export default function TicketDetail() {
                     </Button>
                   )}
                 </div>
+
+                {isTechnician && !isAssignedTech && (
+                  <p className="text-xs text-slate-500">
+                    Only the assigned technician can update this ticket.
+                  </p>
+                )}
+                {isAdmin && hasTechnician && ticket.status === "IN_PROGRESS" && (
+                  <p className="text-xs text-slate-500">
+                    Waiting for the assigned technician to mark this ticket
+                    resolved before it can be closed.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {isTechnician && !isAssignedTech && !showStatusPanel && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6">
+                <p className="text-xs text-slate-500">
+                  Only the assigned technician can update this ticket.
+                </p>
               </CardContent>
             </Card>
           )}
