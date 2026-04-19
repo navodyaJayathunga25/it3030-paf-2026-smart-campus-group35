@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { resourceService } from "@/services/resourceService";
 import { bookingService } from "@/services/bookingService";
 import { timeSlots } from "@/lib/types";
+import { parseAvailabilityWindows, isWithinAvailability } from "@/lib/utils";
 import { ArrowLeft, CalendarPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -94,6 +95,7 @@ export default function BookingCreate() {
 
   const toggleSlotSelection = (slotIndex: number) => {
     if (occupiedSlotIndexes.has(slotIndex)) return;
+    if (unavailableSlotIndexes.has(slotIndex)) return;
     setSelectedSlotIndexes((current) =>
       current.includes(slotIndex)
         ? current.filter((i) => i !== slotIndex)
@@ -102,6 +104,30 @@ export default function BookingCreate() {
   };
 
   const selectedResourceObj = resources.find((r) => r.id === selectedResource);
+
+  const availabilityWindows = useMemo(
+    () => parseAvailabilityWindows(selectedResourceObj?.availabilityWindows),
+    [selectedResourceObj]
+  );
+
+  const toMin = (t: string) => {
+    const [h, m] = t.split(":").map((x) => parseInt(x, 10));
+    return h * 60 + m;
+  };
+
+  const selectedWeekday = date ? new Date(`${date}T00:00:00`).getDay() : -1;
+
+  const unavailableSlotIndexes = useMemo(() => {
+    const unavailable = new Set<number>();
+    if (!date) return unavailable;
+    timeSlots.slice(0, -1).forEach((start, index) => {
+      const end = timeSlots[index + 1];
+      if (!isWithinAvailability(availabilityWindows, selectedWeekday, toMin(start), toMin(end))) {
+        unavailable.add(index);
+      }
+    });
+    return unavailable;
+  }, [availabilityWindows, selectedWeekday, date]);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -209,23 +235,30 @@ export default function BookingCreate() {
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                         {slotIntervals.map((slot) => {
-                          const isOccupied = occupiedSlotIndexes.has(slot.index);
+                          const isUnavailable = unavailableSlotIndexes.has(slot.index);
+                          const isOccupied = !isUnavailable && occupiedSlotIndexes.has(slot.index);
                           const isSelected = selectedSlotIndexes.includes(slot.index);
                           return (
                             <button
                               key={slot.index}
                               type="button"
                               onClick={() => toggleSlotSelection(slot.index)}
-                              disabled={isOccupied}
+                              disabled={isOccupied || isUnavailable}
                               className={`h-11 rounded-md border text-xs md:text-sm transition-colors ${
-                                isOccupied
+                                isUnavailable
+                                  ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                                  : isOccupied
                                   ? "border-red-400 bg-red-500 text-white cursor-not-allowed"
                                   : isSelected
                                   ? "border-blue-500 bg-blue-600 text-white"
                                   : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50"
                               }`}
                             >
-                              {isOccupied ? `${slot.label} (Booked)` : slot.label}
+                              {isUnavailable
+                                ? `${slot.label} (Closed)`
+                                : isOccupied
+                                ? `${slot.label} (Booked)`
+                                : slot.label}
                             </button>
                           );
                         })}
@@ -235,7 +268,10 @@ export default function BookingCreate() {
                           <span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> Selected
                         </span>
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Booked / Unavailable
+                          <span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Booked
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2.5 w-2.5 rounded-full bg-slate-300" /> Closed
                         </span>
                       </div>
                       {selectedSlotIndexes.length > 0 && !isSlotSelectionContiguous && (
