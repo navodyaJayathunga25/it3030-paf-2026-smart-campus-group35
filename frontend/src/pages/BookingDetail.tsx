@@ -4,15 +4,17 @@ import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
+import { useAuth } from "@/context/AuthContext";
 import { bookingService } from "@/services/bookingService";
 import { resourceService } from "@/services/resourceService";
-import { ArrowLeft, Clock, MapPin, Users, CheckCircle2, XCircle, Ban, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Users, CheckCircle2, XCircle, Ban, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function BookingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: booking, isLoading } = useQuery({
     queryKey: ["booking", id],
@@ -32,11 +34,31 @@ export default function BookingDetail() {
       toast.success("Booking cancelled");
       queryClient.invalidateQueries({ queryKey: ["booking", id] });
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
+
+      //queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
+      
     },
     onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed to cancel"),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => bookingService.deleteCancelled(id!),
+    onSuccess: () => {
+      toast.success("Cancelled booking deleted");
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+      navigate(-1);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed to delete booking"),
+  });
+
+  const canDeleteCancelledBooking =
+    booking?.status === "CANCELLED" &&
+    user?.id === booking.userId &&
+    user?.role !== "ADMIN";
 
   if (isLoading) return (
     <AppLayout title="Booking Details">
@@ -162,6 +184,27 @@ export default function BookingDetail() {
                     <Ban className="h-4 w-4 mr-2" />
                   )}
                   Cancel Booking
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {canDeleteCancelledBooking && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6 space-y-3">
+                <h3 className="text-base font-semibold text-slate-900">Actions</h3>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Delete Cancelled Booking
                 </Button>
               </CardContent>
             </Card>

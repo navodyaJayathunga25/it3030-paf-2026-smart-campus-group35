@@ -58,4 +58,8 @@ export const bookingService = {
     const { data } = await apiClient.put<ApiResponse<Booking>>(`/bookings/${id}/cancel`);
     return data.data;
   },
+
+  async deleteCancelled(id: string): Promise<void> {
+    await apiClient.delete<ApiResponse<null>>(`/bookings/${id}`);
+  },
 };

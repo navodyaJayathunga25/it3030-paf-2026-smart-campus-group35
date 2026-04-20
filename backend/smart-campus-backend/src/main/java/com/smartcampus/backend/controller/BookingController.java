@@ -116,5 +116,16 @@ public class BookingController {
             ApiResponse.success("Booking cancelled", bookingService.cancelBooking(id, currentUser))
         );
     }
+
+    /**
+     * DELETE /api/bookings/{id} - Permanently delete a cancelled booking
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteCancelledBooking(
+        @PathVariable String id,
+        @AuthenticationPrincipal User currentUser) {
+        bookingService.deleteCancelledBooking(id, currentUser);
+        return ResponseEntity.ok(ApiResponse.success("Cancelled booking deleted", null));
+    }
 }
 
