@@ -2,23 +2,30 @@ import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminService } from "@/services/userService";
+import { bookingService } from "@/services/bookingService";
 import {
-  CalendarCheck, Wrench, Building2, Users, TrendingUp,
+  CalendarCheck, Building2, Users, TrendingUp,
   Clock, CheckCircle2, AlertTriangle, BarChart3, Loader2,
 } from "lucide-react";
 
-const peakHours = [
-  { hour: "09:00", count: 42 }, { hour: "10:00", count: 56 },
-  { hour: "11:00", count: 48 }, { hour: "13:00", count: 38 },
-  { hour: "14:00", count: 62 }, { hour: "15:00", count: 45 },
-  { hour: "16:00", count: 30 },
-];
-const maxCount = Math.max(...peakHours.map((h) => h.count));
+const BUSINESS_HOURS = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
+
+function toHourSlot(startTime: string): string | null {
+  if (!startTime) return null;
+  const hour = Number(startTime.split(":")[0]);
+  if (Number.isNaN(hour) || hour < 0 || hour > 23) return null;
+  return `${String(hour).padStart(2, "0")}:00`;
+}
 
 export default function Admin() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: adminService.getStats,
+  });
+
+  const { data: adminBookings = [], isLoading: isLoadingBookings } = useQuery({
+    queryKey: ["admin-bookings-peak-hours"],
+    queryFn: bookingService.getAllForAdmin,
   });
 
   if (isLoading) return (
@@ -37,6 +44,24 @@ export default function Admin() {
     { label: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "from-purple-500 to-purple-600" },
     { label: "Resolved Tickets", value: stats?.resolvedTickets ?? 0, icon: TrendingUp, color: "from-indigo-500 to-indigo-600" },
   ];
+
+  const hourCounts = BUSINESS_HOURS.reduce<Record<string, number>>((acc, hour) => {
+    acc[hour] = 0;
+    return acc;
+  }, {});
+
+  adminBookings
+    .filter((booking) => booking.status === "APPROVED")
+    .forEach((booking) => {
+      const slot = toHourSlot(booking.startTime);
+      if (!slot) return;
+      if (!(slot in hourCounts)) return;
+      hourCounts[slot] += 1;
+    });
+
+  const peakHours = BUSINESS_HOURS.map((hour) => ({ hour, count: hourCounts[hour] ?? 0 }));
+  const maxCount = Math.max(1, ...peakHours.map((h) => h.count));
+  const hasPeakHoursData = peakHours.some((h) => h.count > 0);
 
   return (
     <AppLayout title="Admin Dashboard" subtitle="Campus operations overview">
@@ -101,18 +126,32 @@ export default function Admin() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end justify-between gap-2 h-40">
-              {peakHours.map((h) => (
-                <div key={h.hour} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-medium text-slate-500">{h.count}</span>
-                  <div
-                    className="w-full bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t-md transition-all"
-                    style={{ height: `${(h.count / maxCount) * 100}%` }}
-                  />
-                  <span className="text-[10px] text-slate-500">{h.hour}</span>
-                </div>
-              ))}
-            </div>
+            {isLoadingBookings ? (
+              <div className="h-40 flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+              </div>
+            ) : hasPeakHoursData ? (
+              <div className="flex items-stretch gap-1 h-44">
+                {peakHours.map((h) => (
+                  <div key={h.hour} className="flex-1 min-w-0 flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-medium text-slate-500">{h.count}</span>
+                    <div className="w-full h-28 bg-slate-100 rounded-md flex items-end overflow-hidden">
+                      <div
+                        className="w-full bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t-md transition-all"
+                        style={{
+                          height: `${h.count > 0 ? Math.max(8, (h.count / maxCount) * 100) : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-500">{h.hour}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-40 flex items-center justify-center text-sm text-slate-500">
+                No approved booking data available yet.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
