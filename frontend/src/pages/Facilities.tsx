@@ -41,10 +41,10 @@ export default function Facilities() {
     const capacity = resource.capacity;
     if (capacity == null) return false;
 
-    if (capacityFilter === "RANGE_1_30") return capacity >= 1 && capacity <= 30;
-    if (capacityFilter === "RANGE_31_60") return capacity >= 31 && capacity <= 60;
-    if (capacityFilter === "RANGE_61_120") return capacity >= 61 && capacity <= 120;
-    if (capacityFilter === "RANGE_121_PLUS") return capacity >= 121;
+    if (capacityFilter === "RANGE_1_30") return capacity >= 1 && capacity <= 50;
+    if (capacityFilter === "RANGE_31_60") return capacity >= 51 && capacity <= 100;
+    if (capacityFilter === "RANGE_61_120") return capacity >= 101 && capacity <= 200;
+    if (capacityFilter === "RANGE_121_PLUS") return capacity >= 201;
 
     return true;
   });
@@ -99,10 +99,10 @@ export default function Facilities() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All Capacities</SelectItem>
-              <SelectItem value="RANGE_1_30">1 to 30</SelectItem>
-              <SelectItem value="RANGE_31_60">31 to 60</SelectItem>
-              <SelectItem value="RANGE_61_120">61 to 120</SelectItem>
-              <SelectItem value="RANGE_121_PLUS">121+</SelectItem>
+              <SelectItem value="RANGE_1_30">1 to 50</SelectItem>
+              <SelectItem value="RANGE_31_60">51 to 100</SelectItem>
+              <SelectItem value="RANGE_61_120">101 to 200</SelectItem>
+              <SelectItem value="RANGE_121_PLUS">201+</SelectItem>
             </SelectContent>
           </Select>
 

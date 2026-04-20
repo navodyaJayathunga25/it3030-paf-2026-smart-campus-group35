@@ -10,16 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { ResourceStatusBadge } from "@/components/StatusBadge";
 import { resourceService } from "@/services/resourceService";
-import { getResourceTypeIcon, getResourceTypeLabel } from "@/lib/types";
+import { getResourceTypeIcon, getResourceTypeLabel, timeSlots } from "@/lib/types";
 import type { Resource } from "@/lib/types";
 import { Search, Plus, Pencil, Trash2, MapPin, Users, Loader2, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
-  const hour = i.toString().padStart(2, "0");
-  return `${hour}:00`;
-});
+const START_TIME_OPTIONS = timeSlots.slice(0, -1);
+const END_TIME_OPTIONS = timeSlots.slice(1);
 
 const ROLE_OPTIONS = [
   { value: "USER", label: "User" },
@@ -38,6 +36,12 @@ const emptyForm = {
   description: "", status: "ACTIVE" as string, facilities: "",
   availabilitySlots: [] as AvailabilitySlot[],
   allowedRoles: [] as string[],
+};
+
+const availabilityTimeOptionsAreValid = (fromTime: string, toTime: string) => {
+  const fromIndex = timeSlots.indexOf(fromTime);
+  const toIndex = timeSlots.indexOf(toTime);
+  return fromIndex >= 0 && toIndex >= 0 && fromIndex < toIndex;
 };
 
 export default function AdminResources() {
@@ -96,7 +100,7 @@ export default function AdminResources() {
   const addAvailabilitySlot = () => {
     setForm({
       ...form,
-      availabilitySlots: [...form.availabilitySlots, { days: [], fromTime: "08:00", toTime: "18:00" }],
+      availabilitySlots: [...form.availabilitySlots, { days: [], fromTime: "08:00", toTime: "08:30" }],
     });
   };
 
@@ -130,6 +134,17 @@ export default function AdminResources() {
     if (selectedRoles.length === 0) return toast.error("Please select access roles");
     if (form.capacity && (isNaN(Number(form.capacity)) || Number(form.capacity) < 0)) {
       return toast.error("Capacity must be a positive number");
+    }
+
+    const invalidSlot = form.availabilitySlots.find((slot) => {
+      if (slot.days.length === 0) return true;
+      if (!timeSlots.includes(slot.fromTime) || !timeSlots.includes(slot.toTime)) return true;
+      if (!availabilityTimeOptionsAreValid(slot.fromTime, slot.toTime)) return true;
+      return false;
+    });
+
+    if (invalidSlot) {
+      return toast.error("Each time slot must use 30-minute intervals between 08:00 and 20:00, and the end time must be after the start time.");
     }
 
     // Build availability windows string
@@ -187,6 +202,15 @@ export default function AdminResources() {
     });
     setEditId(resource.id);
     setDialogOpen(true);
+  };
+
+  const getResourceDescription = (resource: Resource) => {
+    const customDescription = resource.description?.trim();
+    if (customDescription) return customDescription;
+
+    const typeLabel = getResourceTypeLabel(resource.type);
+    const capacityPart = resource.capacity ? ` with capacity for ${resource.capacity} people` : "";
+    return `${typeLabel} located at ${resource.location}${capacityPart}.`;
   };
 
   return (
@@ -298,7 +322,7 @@ export default function AdminResources() {
                       >
                         <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {TIME_OPTIONS.map((t) => (
+                          {START_TIME_OPTIONS.map((t) => (
                             <SelectItem key={t} value={t}>{t}</SelectItem>
                           ))}
                         </SelectContent>
@@ -310,7 +334,7 @@ export default function AdminResources() {
                       >
                         <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {TIME_OPTIONS.map((t) => (
+                          {END_TIME_OPTIONS.map((t) => (
                             <SelectItem key={t} value={t}>{t}</SelectItem>
                           ))}
                         </SelectContent>
@@ -403,6 +427,9 @@ export default function AdminResources() {
                         <ResourceStatusBadge status={resource.status} />
                         <span className="text-xs text-slate-500">{getResourceTypeLabel(resource.type)}</span>
                       </div>
+                      <p className="text-xs text-slate-600 mb-2 max-w-2xl leading-relaxed line-clamp-2">
+                        {getResourceDescription(resource)}
+                      </p>
                       <div className="flex items-center gap-4 text-xs text-slate-500">
                         <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{resource.location}</span>
                         {resource.capacity && <span className="flex items-center gap-1"><Users className="h-3 w-3" />Cap: {resource.capacity}</span>}

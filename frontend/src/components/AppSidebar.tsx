@@ -32,13 +32,13 @@ const navItems: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["USER", "ADMIN", "TECHNICIAN", "LECTURER"],
+    roles: ["USER", "TECHNICIAN", "LECTURER"],
   },
   {
     label: "Facilities",
     href: "/facilities",
     icon: Building2,
-    roles: ["USER", "ADMIN", "TECHNICIAN", "LECTURER"],
+    roles: ["USER", "TECHNICIAN", "LECTURER"],
   },
   {
     label: "My Bookings",
@@ -56,13 +56,13 @@ const navItems: NavItem[] = [
     label: "Notifications",
     href: "/notifications",
     icon: Bell,
-    roles: ["USER", "ADMIN", "TECHNICIAN", "LECTURER"],
+    roles: ["USER", "TECHNICIAN", "LECTURER"],
   },
   {
     label: "Profile",
     href: "/profile",
     icon: User,
-    roles: ["USER", "ADMIN", "TECHNICIAN", "LECTURER"],
+    roles: ["USER", "TECHNICIAN", "LECTURER"],
   },
 ];
 
@@ -89,6 +89,18 @@ const adminItems: NavItem[] = [
     roles: ["ADMIN"],
   },
   { label: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
+  {
+    label: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Profile",
+    href: "/profile",
+    icon: User,
+    roles: ["ADMIN"],
+  },
 ];
 
 const techItems: NavItem[] = [
@@ -160,7 +172,7 @@ export default function AppSidebar() {
         </div>
         <div>
           <h1 className="text-base font-bold text-white leading-tight">
-            smartcampus
+            SMART CAMPUS
           </h1>
           <p className="text-[10px] text-slate-400 font-medium">
             Smart Operations

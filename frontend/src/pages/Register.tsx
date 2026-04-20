@@ -98,7 +98,7 @@ export default function Register() {
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
               <span className="text-xl font-bold text-slate-900">
-                smartcampus
+                SMART CAMPUS
               </span>
             </Link>
             <h2 className="text-2xl font-bold text-slate-900">
