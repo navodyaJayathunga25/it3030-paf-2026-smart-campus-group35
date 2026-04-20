@@ -17,8 +17,15 @@ import {
 import { ticketService } from "@/services/ticketService";
 import { resourceService } from "@/services/resourceService";
 import { useAuth } from "@/context/AuthContext";
-import { ticketCategories } from "@/lib/types";
-import type { TicketPriority } from "@/lib/types";
+import { ticketCategories, getResourceTypeLabel, getResourceTypeIcon } from "@/lib/types";
+import type { TicketPriority, ResourceType } from "@/lib/types";
+
+const resourceTypeOptions: ResourceType[] = [
+  "LECTURE_HALL",
+  "LAB",
+  "MEETING_ROOM",
+  "EQUIPMENT",
+];
 import { uploadManyToCloudinary } from "@/lib/cloudinary";
 import {
   ArrowLeft,
@@ -82,18 +89,26 @@ export default function TicketCreate() {
 
   const [category, setCategory] = useState("");
   const [priority, setPriority] = useState<TicketPriority | "">("");
+  const [resourceType, setResourceType] = useState<ResourceType | "">("");
   const [resourceId, setResourceId] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [contactEmail, setContactEmail] = useState(user?.email ?? "");
   const [contactPhone, setContactPhone] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [locationAutoFilled, setLocationAutoFilled] = useState(false);
 
   const { data: resources = [] } = useQuery({
     queryKey: ["resources"],
     queryFn: () => resourceService.getAll({ status: "ACTIVE" }),
   });
+
+  const filteredResources = useMemo(
+    () =>
+      resourceType
+        ? resources.filter((r) => r.type === resourceType)
+        : [],
+    [resources, resourceType],
+  );
 
   const selectedResource = useMemo(
     () => resources.find((r) => r.id === resourceId),
@@ -107,19 +122,27 @@ export default function TicketCreate() {
     [files],
   );
 
-  const handleResourceChange = (v: string) => {
+  const handleResourceTypeChange = (v: string) => {
+    const next = v === "none" ? "" : (v as ResourceType);
+    setResourceType(next);
+    setResourceId("");
+    setLocation("");
+    setLocationChoice("none");
+  };
+
+  const [locationChoice, setLocationChoice] = useState<string>("none");
+
+  const handleLocationResourceChange = (v: string) => {
+    setLocationChoice(v);
+    if (v === "other") {
+      setResourceId("");
+      setLocation("");
+      return;
+    }
     const id = v === "none" ? "" : v;
     setResourceId(id);
-    if (id) {
-      const picked = resources.find((r) => r.id === id);
-      if (picked?.location && (!location || locationAutoFilled)) {
-        setLocation(picked.location);
-        setLocationAutoFilled(true);
-      }
-    } else if (locationAutoFilled) {
-      setLocation("");
-      setLocationAutoFilled(false);
-    }
+    const picked = resources.find((r) => r.id === id);
+    setLocation(picked?.location ?? "");
   };
 
   const mutation = useMutation({
@@ -246,29 +269,26 @@ export default function TicketCreate() {
                   </span>
                 </Label>
                 <Select
-                  value={resourceId || "none"}
-                  onValueChange={handleResourceChange}
+                  value={resourceType || "none"}
+                  onValueChange={handleResourceTypeChange}
                 >
                   <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select a resource" />
+                    <SelectValue placeholder="Select a resource type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {resources.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                        <span className="text-slate-400 ml-2 text-xs">
-                          {r.location}
-                        </span>
+                    {resourceTypeOptions.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        <span className="mr-2">{getResourceTypeIcon(t)}</span>
+                        {getResourceTypeLabel(t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {selectedResource && (
+                {resourceType && (
                   <p className="text-xs text-slate-500 flex items-center gap-1 pt-1">
                     <Info className="h-3 w-3" />
-                    {selectedResource.type.replace("_", " ")} ·{" "}
-                    {selectedResource.location}
+                    {filteredResources.length} resource(s) available
                   </p>
                 )}
               </div>
@@ -369,23 +389,66 @@ export default function TicketCreate() {
               <Label className="text-sm font-medium">
                 Location <span className="text-red-500">*</span>
               </Label>
-              <div className="relative">
-                <MapPin className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  value={location}
-                  onChange={(e) => {
-                    setLocation(e.target.value);
-                    setLocationAutoFilled(false);
-                  }}
-                  placeholder="e.g. Building A, Room 101"
-                  className="pl-9 h-10"
-                />
-              </div>
-              {locationAutoFilled && selectedResource && (
-                <p className="text-xs text-emerald-600 flex items-center gap-1 pt-1">
-                  <Info className="h-3 w-3" />
-                  Auto-filled from selected resource. You can edit if needed.
-                </p>
+              {resourceType ? (
+                <>
+                  <Select
+                    value={locationChoice}
+                    onValueChange={handleLocationResourceChange}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select a location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select...</SelectItem>
+                      {filteredResources.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                          <span className="text-slate-400 ml-2 text-xs">
+                            {r.location}
+                          </span>
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="other">Other (type manually)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {filteredResources.length === 0 && locationChoice !== "other" && (
+                    <p className="text-xs text-amber-600 flex items-center gap-1 pt-1">
+                      <Info className="h-3 w-3" />
+                      No active resources of this type — choose "Other" to type a location.
+                    </p>
+                  )}
+                  {locationChoice === "other" && (
+                    <div className="relative pt-2">
+                      <MapPin className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 translate-y-0" />
+                      <Input
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="e.g. Building A, Room 101"
+                        className="pl-9 h-10"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                  {selectedResource && locationChoice !== "other" && (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1 pt-1">
+                      <MapPin className="h-3 w-3" />
+                      {selectedResource.location}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="relative">
+                  <MapPin className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g. Building A, Room 101"
+                    className="pl-9 h-10"
+                  />
+                  <p className="text-xs text-slate-500 pt-1">
+                    Tip: pick a Related Resource type above to choose from the list.
+                  </p>
+                </div>
               )}
             </div>
           </CardContent>
