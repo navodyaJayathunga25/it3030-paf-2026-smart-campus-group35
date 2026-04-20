@@ -44,6 +44,10 @@ export const ticketService = {
     return data.data;
   },
 
+  async delete(id: string): Promise<void> {
+    await apiClient.delete(`/tickets/${id}`);
+  },
+
   // Comments
   async getComments(ticketId: string): Promise<Comment[]> {
     const { data } = await apiClient.get<ApiResponse<Comment[]>>(`/tickets/${ticketId}/comments`);

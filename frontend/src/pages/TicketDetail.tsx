@@ -154,6 +154,19 @@ export default function TicketDetail() {
       toast.error(err.response?.data?.message ?? "Failed to delete comment"),
   });
 
+  const deleteTicketMutation = useMutation({
+    mutationFn: () => ticketService.delete(id!),
+    onSuccess: () => {
+      toast.success("Ticket deleted");
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      navigate("/tickets");
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message ?? "Failed to delete ticket"),
+  });
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   if (isLoading) {
     return (
       <AppLayout title="Ticket Details">
@@ -204,15 +217,61 @@ export default function TicketDetail() {
     setEditContent(content);
   };
 
+  const canDeleteTicket =
+    ticket.status === "REJECTED" &&
+    (isAdmin || ticket.userId === user?.id);
+
   return (
     <AppLayout title={`Ticket #${shortId}`} subtitle={ticket.category}>
-      <Button
-        variant="ghost"
-        className="mb-4 text-slate-600"
-        onClick={() => navigate(-1)}
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" /> Back
-      </Button>
+      <div className="flex items-center justify-between mb-4">
+        <Button
+          variant="ghost"
+          className="text-slate-600"
+          onClick={() => navigate(-1)}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+        </Button>
+        {canDeleteTicket && (
+          <Button
+            variant="outline"
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> Delete Ticket
+          </Button>
+        )}
+      </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this ticket?</DialogTitle>
+            <DialogDescription>
+              This rejected ticket will be permanently removed along with its
+              comments. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteTicketMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => deleteTicketMutation.mutate()}
+              disabled={deleteTicketMutation.isPending}
+            >
+              {deleteTicketMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -385,9 +444,11 @@ export default function TicketDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {comments.map((comment) => {
+              {comments.map((comment, index) => {
                 const isOwn = comment.userId === user?.id;
                 const isEditing = editingCommentId === comment.id;
+                const isLast = index === comments.length - 1;
+                const canModify = isOwn && isLast;
                 return (
                   <div
                     key={comment.id}
@@ -429,7 +490,7 @@ export default function TicketDetail() {
                         <span className="text-[10px] text-slate-400">
                           {new Date(comment.createdAt).toLocaleString()}
                         </span>
-                        {isOwn && !isEditing && (
+                        {canModify && !isEditing && (
                           <div className="flex gap-1">
                             <button
                               className="p-1 rounded hover:bg-white transition-colors"
