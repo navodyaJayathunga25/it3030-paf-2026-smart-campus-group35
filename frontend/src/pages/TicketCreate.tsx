@@ -169,9 +169,16 @@ export default function TicketCreate() {
     setFiles(files.filter((_, i) => i !== index));
   };
 
+  const isFormValid =
+    category.trim().length > 0 &&
+    priority !== "" &&
+    location.trim().length > 0 &&
+    description.trim().length > 0 &&
+    contactEmail.trim().length > 0;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!category || !priority || !location || !description || !contactEmail) {
+    if (!isFormValid) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -566,8 +573,13 @@ export default function TicketCreate() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md"
-                disabled={isSubmitting}
+                className={cn(
+                  "w-full text-white shadow-md transition-all",
+                  isFormValid && !isSubmitting
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                    : "bg-slate-300 text-slate-500 shadow-none cursor-not-allowed hover:bg-slate-300",
+                )}
+                disabled={isSubmitting || !isFormValid}
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
