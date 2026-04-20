@@ -374,9 +374,11 @@ export default function TicketDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {comments.map((comment) => {
+              {comments.map((comment, index) => {
                 const isOwn = comment.userId === user?.id;
                 const isEditing = editingCommentId === comment.id;
+                const isLast = index === comments.length - 1;
+                const canModify = isOwn && isLast;
                 return (
                   <div
                     key={comment.id}
@@ -418,7 +420,7 @@ export default function TicketDetail() {
                         <span className="text-[10px] text-slate-400">
                           {new Date(comment.createdAt).toLocaleString()}
                         </span>
-                        {isOwn && !isEditing && (
+                        {canModify && !isEditing && (
                           <div className="flex gap-1">
                             <button
                               className="p-1 rounded hover:bg-white transition-colors"
