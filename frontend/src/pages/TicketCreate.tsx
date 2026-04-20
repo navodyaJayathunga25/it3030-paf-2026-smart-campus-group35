@@ -193,7 +193,8 @@ export default function TicketCreate() {
         <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
-      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
         {/* Section: Issue Details */}
         <Card className="border border-slate-200 shadow-sm">
           <CardHeader className="border-b bg-slate-50/60">
@@ -513,35 +514,82 @@ export default function TicketCreate() {
           </CardContent>
         </Card>
 
-        {/* Footer actions */}
-        <div className="flex items-center justify-between gap-3 pb-8">
+        {/* Footer note */}
+        <div className="flex items-center gap-3 pb-4">
           <p className="text-xs text-slate-500 flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5" />
             Fields marked with <span className="text-red-500">*</span> are
             required.
           </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(-1)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md min-w-[160px]"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              {uploading ? "Uploading..." : "Submit Ticket"}
-            </Button>
-          </div>
+        </div>
+        </div>
+
+        {/* Right sidebar: Submit summary */}
+        <div className="lg:col-span-1">
+          <Card className="border border-slate-200 shadow-sm lg:sticky lg:top-6">
+            <CardHeader className="border-b bg-slate-50/60">
+              <CardTitle className="text-base font-semibold">
+                Submit Ticket
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-5 space-y-4">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Category</span>
+                  <span className="font-medium text-slate-800">
+                    {category || <span className="text-slate-400">—</span>}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Priority</span>
+                  {priority ? (
+                    <span className="flex items-center gap-1.5 font-medium text-slate-800">
+                      <span
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          priorityOptions.find((p) => p.value === priority)?.dot,
+                        )}
+                      />
+                      {priorityOptions.find((p) => p.value === priority)?.label}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-slate-500">Attachments</span>
+                  <span className="font-medium text-slate-800">
+                    {files.length}/3
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                {uploading ? "Uploading..." : "Submit Ticket"}
+              </Button>
+              <p className="text-xs text-slate-500 text-center">
+                Your ticket will be reviewed and assigned
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate(-1)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </form>
     </AppLayout>
