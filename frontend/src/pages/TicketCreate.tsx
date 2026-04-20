@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,6 +78,7 @@ const MAX_DESCRIPTION = 1000;
 export default function TicketCreate() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [category, setCategory] = useState("");
@@ -146,6 +147,8 @@ export default function TicketCreate() {
     },
     onSuccess: (ticket) => {
       toast.success("Ticket created successfully");
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
       navigate(`/tickets/${ticket.id}`);
     },
     onError: (err: any) =>

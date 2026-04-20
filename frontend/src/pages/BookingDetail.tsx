@@ -32,6 +32,8 @@ export default function BookingDetail() {
       toast.success("Booking cancelled");
       queryClient.invalidateQueries({ queryKey: ["booking", id] });
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
     },
     onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed to cancel"),
   });
