@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 export default function BookingCreate() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const preselectedResourceId = searchParams.get("resource") || "";
 
   const [selectedResource, setSelectedResource] = useState(preselectedResourceId);
@@ -143,6 +144,8 @@ export default function BookingCreate() {
       }),
     onSuccess: (booking) => {
       toast.success("Booking request submitted successfully");
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
       navigate(`/bookings/${booking.id}`);
     },
     onError: (err: any) =>

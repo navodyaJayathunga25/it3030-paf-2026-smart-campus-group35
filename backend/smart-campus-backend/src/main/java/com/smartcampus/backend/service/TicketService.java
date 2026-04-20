@@ -74,6 +74,16 @@ public class TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
 
+        notificationService.notifyAdminsExcept(
+            currentUser.getId(),
+            NotificationType.TICKET,
+            "New Ticket Created",
+            currentUser.getName() + " created a new ticket: \"" + saved.getCategory()
+                + "\" (Priority: " + saved.getPriority().name() + ")",
+            saved.getId(),
+            "/tickets/" + saved.getId()
+        );
+
         String recipient = (ticket.getContactEmail() != null && !ticket.getContactEmail().isBlank())
             ? ticket.getContactEmail()
             : currentUser.getEmail();
@@ -156,16 +166,52 @@ public class TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
 
-        if (newStatus == TicketStatus.RESOLVED) {
+        String statusLabel = newStatus.name().replace('_', ' ');
+        String ticketTitleForUser = switch (newStatus) {
+            case IN_PROGRESS -> "Ticket In Progress";
+            case RESOLVED -> "Ticket Resolved";
+            case CLOSED -> "Ticket Closed";
+            case REJECTED -> "Ticket Rejected";
+            case OPEN -> "Ticket Reopened";
+        };
+        String ticketTitleForAdmins = "Ticket " + statusLabel;
+
+        String statusMessageForUser = "Your ticket \"" + ticket.getCategory() + "\" status changed from "
+            + currentStatus.name().replace('_', ' ') + " to " + newStatus.name().replace('_', ' ')
+            + " by " + currentUser.getName() + ".";
+        if (newStatus == TicketStatus.REJECTED && saved.getRejectionReason() != null
+            && !saved.getRejectionReason().isBlank()) {
+            statusMessageForUser += " Reason: " + saved.getRejectionReason();
+        }
+
+        String statusMessageForAdmins = currentUser.getName() + " changed ticket #" + ticket.getId()
+            + " (" + ticket.getCategory() + ") from "
+            + currentStatus.name().replace('_', ' ') + " to "
+            + newStatus.name().replace('_', ' ') + ".";
+        if (newStatus == TicketStatus.REJECTED && saved.getRejectionReason() != null
+            && !saved.getRejectionReason().isBlank()) {
+            statusMessageForAdmins += " Reason: " + saved.getRejectionReason();
+        }
+
+        if (!ticket.getUserId().equals(currentUser.getId())) {
             notificationService.sendNotification(
                 ticket.getUserId(),
                 NotificationType.TICKET,
-                "Ticket Resolved",
-                "Your ticket \"" + ticket.getCategory() + "\" has been resolved.",
+                ticketTitleForUser,
+                statusMessageForUser,
                 ticket.getId(),
                 "/tickets/" + ticket.getId()
             );
         }
+
+        notificationService.notifyAdminsExcept(
+            currentUser.getId(),
+            NotificationType.TICKET,
+            ticketTitleForAdmins,
+            statusMessageForAdmins,
+            ticket.getId(),
+            "/tickets/" + ticket.getId()
+        );
 
         if (newStatus == TicketStatus.RESOLVED || newStatus == TicketStatus.CLOSED
             || newStatus == TicketStatus.REJECTED) {
@@ -203,6 +249,8 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
             .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
 
+        TicketStatus previousStatus = ticket.getStatus();
+
         User technician = userRepository.findById(technicianId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", technicianId));
 
@@ -223,6 +271,32 @@ public class TicketService {
             "New Ticket Assigned",
             "You have been assigned a new ticket: \"" + ticket.getCategory()
                 + "\" (Priority: " + ticket.getPriority().name() + ")",
+            ticket.getId(),
+            "/tickets/" + ticket.getId()
+        );
+
+        if (!ticket.getUserId().equals(admin.getId())) {
+            notificationService.sendNotification(
+                ticket.getUserId(),
+                NotificationType.TICKET,
+                "Ticket Assigned",
+                "Your ticket \"" + ticket.getCategory() + "\" status changed from "
+                    + previousStatus.name().replace('_', ' ') + " to "
+                    + saved.getStatus().name().replace('_', ' ') + ". Assigned to "
+                    + technician.getName() + ".",
+                ticket.getId(),
+                "/tickets/" + ticket.getId()
+            );
+        }
+
+        notificationService.notifyAdminsExcept(
+            admin.getId(),
+            NotificationType.TICKET,
+            "Ticket Assigned",
+            admin.getName() + " assigned ticket #" + ticket.getId() + " ("
+                + ticket.getCategory() + ") to " + technician.getName() + ". Status: "
+                + previousStatus.name().replace('_', ' ') + " -> "
+                + saved.getStatus().name().replace('_', ' ') + ".",
             ticket.getId(),
             "/tickets/" + ticket.getId()
         );
@@ -273,6 +347,16 @@ public class TicketService {
                 "/tickets/" + ticket.getId()
             );
         }
+
+        notificationService.notifyAdminsExcept(
+            currentUser.getId(),
+            NotificationType.COMMENT,
+            "New " + currentUser.getRole().name() + " Comment on Ticket",
+            currentUser.getName() + " (" + currentUser.getRole().name() + ") added a comment on ticket #" + ticket.getId()
+                + " (" + ticket.getCategory() + ").",
+            ticket.getId(),
+            "/tickets/" + ticket.getId()
+        );
 
         return saved;
     }

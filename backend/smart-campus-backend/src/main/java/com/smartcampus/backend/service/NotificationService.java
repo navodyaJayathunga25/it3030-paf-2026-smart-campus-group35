@@ -29,20 +29,52 @@ public class NotificationService {
         log.debug("Notified {} admin(s): {}", admins.size(), title);
     }
 
+    public void notifyAdminsExcept(String excludedUserId, NotificationType type,
+                                   String title, String message,
+                                   String referenceId, String link) {
+        List<User> admins = userRepository.findByRole(UserRole.ADMIN);
+        int notified = 0;
+        for (User admin : admins) {
+            if (excludedUserId != null && excludedUserId.equals(admin.getId())) {
+                continue;
+            }
+            sendNotification(admin.getId(), type, title, message, referenceId, link);
+            notified++;
+        }
+        log.debug("Notified {} admin(s) (excluding={}): {}", notified, excludedUserId, title);
+    }
+
     public void sendNotification(String userId, NotificationType type,
                                   String title, String message,
                                   String referenceId, String link) {
+        String resolvedLink = resolveLink(type, referenceId, link);
         Notification notification = Notification.builder()
             .userId(userId)
             .type(type)
             .title(title)
             .message(message)
             .referenceId(referenceId)
-            .link(link)
+            .link(resolvedLink)
             .read(false)
             .build();
         notificationRepository.save(notification);
         log.debug("Notification sent to user {}: {}", userId, title);
+    }
+
+    private String resolveLink(NotificationType type, String referenceId, String link) {
+        if (link != null && !link.isBlank()) {
+            return link;
+        }
+
+        return switch (type) {
+            case BOOKING -> referenceId != null && !referenceId.isBlank()
+                ? "/bookings/" + referenceId
+                : "/bookings";
+            case TICKET, COMMENT -> referenceId != null && !referenceId.isBlank()
+                ? "/tickets/" + referenceId
+                : "/tickets";
+            case USER -> "/admin/users";
+        };
     }
 
     public List<Notification> getUserNotifications(String userId) {

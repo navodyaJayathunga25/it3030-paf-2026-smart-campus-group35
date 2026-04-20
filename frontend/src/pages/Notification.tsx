@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { notificationService } from "@/services/notificationService";
-import type { NotificationType } from "@/lib/types";
+import type { Notification, NotificationType } from "@/lib/types";
 import { Bell, CalendarCheck, Wrench, MessageSquare, CheckCheck, Circle, Loader2, UserPlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,11 +36,13 @@ const typeColors: Record<NotificationType, string> = {
 export default function Notifications() {
   const [filter, setFilter] = useState<string>("ALL");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications"],
     queryFn: notificationService.getAll,
+    refetchInterval: 30_000,
   });
 
   const markAllMutation = useMutation({
@@ -78,6 +80,35 @@ export default function Notifications() {
     : filter === "UNREAD"
     ? notifications.filter((n) => !n.read)
     : notifications.filter((n) => n.type === filter);
+
+  const getNotificationLink = (notif: Notification): string => {
+    if (notif.link && notif.link.trim().length > 0) {
+      return notif.link;
+    }
+
+    if (notif.type === "BOOKING") {
+      return notif.referenceId ? `/bookings/${notif.referenceId}` : "/bookings";
+    }
+    if (notif.type === "TICKET" || notif.type === "COMMENT") {
+      return notif.referenceId ? `/tickets/${notif.referenceId}` : "/tickets";
+    }
+    if (notif.type === "USER") {
+      return "/admin/users";
+    }
+    return "/notifications";
+  };
+
+  const handleNotificationOpen = async (notif: Notification) => {
+    const target = getNotificationLink(notif);
+    if (!notif.read) {
+      try {
+        await markReadMutation.mutateAsync(notif.id);
+      } catch {
+        // Continue navigation even if read-state update fails.
+      }
+    }
+    navigate(target);
+  };
 
   if (isLoading) return (
     <AppLayout title="Notifications" subtitle="Stay updated on your bookings and tickets">
@@ -131,13 +162,13 @@ export default function Notifications() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <Link
-                      to={notif.link ?? "#"}
-                      onClick={() => !notif.read && markReadMutation.mutate(notif.id)}
+                    <button
+                      type="button"
+                      onClick={() => handleNotificationOpen(notif)}
                       className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors"
                     >
                       {notif.title}
-                    </Link>
+                    </button>
                     {!notif.read && <Circle className="h-2 w-2 fill-blue-500 text-blue-500" />}
                   </div>
                   <p className="text-sm text-slate-600">{notif.message}</p>
