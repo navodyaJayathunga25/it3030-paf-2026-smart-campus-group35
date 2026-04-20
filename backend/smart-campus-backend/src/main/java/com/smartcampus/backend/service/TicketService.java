@@ -295,6 +295,25 @@ public class TicketService {
         return commentRepository.save(comment);
     }
 
+    public void deleteTicket(String ticketId, User currentUser) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+            .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
+
+        boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
+        boolean isOwner = ticket.getUserId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new UnauthorizedException("You can only delete your own tickets");
+        }
+
+        if (!isAdmin && ticket.getStatus() != TicketStatus.REJECTED) {
+            throw new UnauthorizedException("Only rejected tickets can be deleted");
+        }
+
+        commentRepository.deleteAll(commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId));
+        ticketRepository.delete(ticket);
+    }
+
     public void deleteComment(String ticketId, String commentId, User currentUser) {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
