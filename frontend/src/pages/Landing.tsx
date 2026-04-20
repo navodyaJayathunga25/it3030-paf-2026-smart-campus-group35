@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 const HERO_IMG =
-  "https://mgx-backend-cdn.metadl.com/generate/images/422905/2026-04-12/d728902c-2224-4359-8f7c-72a0dfb4900e.png";
+  "https://static.sliit.lk/wp-content/uploads/2018/03/SLIIT-malabe.jpg";
 const BOOKING_IMG =
   "https://mgx-backend-cdn.metadl.com/generate/images/422905/2026-04-12/0bf5a29c-f23e-4d63-8dba-8e11435e655e.png";
 const MAINTENANCE_IMG =
@@ -215,21 +215,6 @@ export default function Landing() {
                   className="w-full h-auto object-cover"
                 />
               </div>
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-lg p-4 border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Booking Approved
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Main Auditorium · Apr 15
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -322,9 +307,6 @@ export default function Landing() {
           {/* Booking Module */}
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
-                Module B
-              </div>
               <h3 className="text-2xl font-bold text-slate-900">
                 Theater-Style Booking
               </h3>
@@ -369,9 +351,6 @@ export default function Landing() {
               />
             </div>
             <div className="order-1 lg:order-2 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                Module C
-              </div>
               <h3 className="text-2xl font-bold text-slate-900">
                 Maintenance & Incident Ticketing
               </h3>

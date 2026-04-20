@@ -104,8 +104,7 @@ export interface Notification {
 
 // ============ STATIC HELPERS ============
 export const ticketCategories = [
-  'AV Equipment', 'IT Infrastructure', 'Electrical', 'Plumbing',
-  'HVAC', 'Furniture', 'Cleaning', 'Security', 'Mechanical', 'Other',
+  'Electrical', 'Plumbing', 'Furniture', 'Cleaning', 'Security', , 'Other'
 ];
 
 export const timeSlots = [

@@ -13,7 +13,7 @@ import axios from "axios";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { isAuthenticated, refreshUser } = useAuth();
+  const { isAuthenticated, refreshUser, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -21,7 +21,7 @@ export default function Login() {
 
   // Already logged in → go to dashboard
   if (isAuthenticated) {
-    navigate("/dashboard", { replace: true });
+    navigate(user?.role === "ADMIN" ? "/admin" : "/dashboard", { replace: true });
     return null;
   }
 
@@ -38,9 +38,9 @@ export default function Login() {
     }
     setEmailLoading(true);
     try {
-      await authService.loginWithEmail({ email: email.trim(), password });
+      const result = await authService.loginWithEmail({ email: email.trim(), password });
       await refreshUser();
-      navigate("/dashboard", { replace: true });
+      navigate(result.user.role === "ADMIN" ? "/admin" : "/dashboard", { replace: true });
     } catch (err) {
       const msg = axios.isAxiosError(err)
         ? err.response?.data?.message ?? "Sign in failed."
