@@ -22,9 +22,16 @@ export default function AuthCallback() {
 
     if (token) {
       authService.storeToken(token);
-      refreshUser().then(() => {
-        navigate("/dashboard", { replace: true });
-      });
+      refreshUser()
+        .then(() => authService.getCurrentUser())
+        .then((currentUser) => {
+          navigate(currentUser.role === "ADMIN" ? "/admin" : "/dashboard", {
+            replace: true,
+          });
+        })
+        .catch(() => {
+          navigate("/dashboard", { replace: true });
+        });
     } else {
       navigate("/auth/error?error=No+token+received", { replace: true });
     }

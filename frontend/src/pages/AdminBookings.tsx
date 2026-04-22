@@ -31,6 +31,8 @@ export default function AdminBookings() {
     onSuccess: () => {
       toast.success("Booking approved");
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
     },
     onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed"),
   });
@@ -43,6 +45,8 @@ export default function AdminBookings() {
       setOpenRejectId(null);
       setReason("");
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
     },
     onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed"),
   });
@@ -181,6 +185,7 @@ export default function AdminBookings() {
                         </Dialog>
                       </div>
                     )}
+
                   </div>
                 </CardContent>
               </Card>

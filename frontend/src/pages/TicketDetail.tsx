@@ -77,6 +77,8 @@ export default function TicketDetail() {
     mutationFn: (content: string) => ticketService.addComment(id!, content),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ticket-comments", id] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
       setNewComment("");
     },
     onError: (err: any) =>
@@ -93,6 +95,8 @@ export default function TicketDetail() {
     }) => ticketService.updateComment(id!, commentId, content),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ticket-comments", id] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
       setEditingCommentId(null);
       setEditContent("");
     },
@@ -114,6 +118,8 @@ export default function TicketDetail() {
       toast.success("Technician assigned");
       queryClient.invalidateQueries({ queryKey: ["ticket", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
     },
     onError: (err: any) =>
       toast.error(err.response?.data?.message ?? "Failed to assign"),
@@ -126,6 +132,8 @@ export default function TicketDetail() {
       toast.success(`Ticket marked ${vars.status.replace("_", " ").toLowerCase()}`);
       queryClient.invalidateQueries({ queryKey: ["ticket", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
       setResolutionNotes("");
       setRejectDialogOpen(false);
       setRejectReason("");
@@ -137,8 +145,11 @@ export default function TicketDetail() {
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId: string) =>
       ticketService.deleteComment(id!, commentId),
-    onSuccess: () =>
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ticket-comments", id] }),
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
+    },
     onError: (err: any) =>
       toast.error(err.response?.data?.message ?? "Failed to delete comment"),
   });
