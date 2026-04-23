@@ -73,7 +73,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         } else {
             // Update existing user's profile
             user.setName(name);
-            user.setPicture(picture);
+            // Only set picture from Google if the user has not uploaded a custom one.
+            // Otherwise every login would overwrite the user's custom profile picture.
+            if (user.getPicture() == null || user.getPicture().isBlank()) {
+                user.setPicture(picture);
+            }
             if (user.getProvider() == null) {
                 user.setProvider(provider);
                 user.setProviderId(providerId);
