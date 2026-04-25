@@ -23,6 +23,8 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   roles: string[];
+  // Additional path prefixes that should also mark this item active.
+  matchPaths?: string[];
 }
 
 const navItems: NavItem[] = [
@@ -42,13 +44,13 @@ const navItems: NavItem[] = [
     label: "My Bookings",
     href: "/bookings",
     icon: CalendarCheck,
-    roles: ["USER", "ADMIN", "TECHNICIAN", "LECTURER"],
+    roles: ["USER", "TECHNICIAN", "LECTURER"],
   },
   {
     label: "My Tickets",
     href: "/tickets",
     icon: Wrench,
-    roles: ["USER", "ADMIN", "TECHNICIAN", "LECTURER"],
+    roles: ["USER", "TECHNICIAN", "LECTURER"],
   },
   {
     label: "Notifications",
@@ -71,12 +73,14 @@ const adminItems: NavItem[] = [
     href: "/admin/bookings",
     icon: ClipboardList,
     roles: ["ADMIN"],
+    matchPaths: ["/bookings"],
   },
   {
     label: "All Tickets",
     href: "/admin/tickets",
     icon: Wrench,
     roles: ["ADMIN"],
+    matchPaths: ["/tickets"],
   },
   {
     label: "Resources",
@@ -112,23 +116,26 @@ export default function AppSidebar() {
     const filtered = items.filter((item) => item.roles.includes(role));
     if (filtered.length === 0) return null;
     return (
-      <div className="mb-6">
+      <div className="mb-3">
         {title && (
-          <p className="px-4 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          <p className="px-4 mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
             {title}
           </p>
         )}
-        <nav className="space-y-1 px-2">
+        <nav className="space-y-0.5 px-2">
           {filtered.map((item) => {
-            const isActive =
-              location.pathname === item.href ||
-              location.pathname.startsWith(item.href + "/");
+            const paths = [item.href, ...(item.matchPaths ?? [])];
+            const isActive = paths.some(
+              (p) =>
+                location.pathname === p ||
+                location.pathname.startsWith(p + "/"),
+            );
             return (
               <Link
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                   isActive
                     ? "bg-white/10 text-white shadow-sm"
                     : "text-slate-300 hover:bg-white/5 hover:text-white",
@@ -147,7 +154,7 @@ export default function AppSidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-gradient-to-b from-[#0F172A] to-[#1E293B] flex flex-col">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10">
         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
           <GraduationCap className="h-6 w-6 text-white" />
         </div>
@@ -162,7 +169,7 @@ export default function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-4">
+      <div className="flex-1 overflow-y-auto py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {renderNavGroup(navItems, "Main")}
         {renderNavGroup(adminItems, "Administration")}
         {renderNavGroup(techItems, "Technician")}
