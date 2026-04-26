@@ -25,7 +25,7 @@ export default function BookingCreate() {
   const [date, setDate] = useState("");
   const [selectedSlotIndexes, setSelectedSlotIndexes] = useState<number[]>([]);
   const [purpose, setPurpose] = useState("");
-  const [attendees, setAttendees] = useState("1");
+  const [attendees, setAttendees] = useState("");
 
   const slotIntervals = useMemo(
     () =>
