@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   BarChart3,
   Loader2,
+  Award,
 } from "lucide-react";
 
 const BUSINESS_HOURS = [
@@ -126,6 +127,24 @@ export default function Admin() {
   }));
   const maxCount = Math.max(1, ...peakHours.map((h) => h.count));
   const hasPeakHoursData = peakHours.some((h) => h.count > 0);
+
+  // Calculate top resources by booking count
+  const resourceBookingCounts = adminBookings
+    .filter((booking) => booking.status === "APPROVED")
+    .reduce<Record<string, { name: string; count: number }>>(
+      (acc, booking) => {
+        if (!acc[booking.resourceId]) {
+          acc[booking.resourceId] = { name: booking.resourceName, count: 0 };
+        }
+        acc[booking.resourceId].count += 1;
+        return acc;
+      },
+      {},
+    );
+
+  const topResources = Object.values(resourceBookingCounts)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
   return (
     <AppLayout title="Admin Dashboard" subtitle="Campus operations overview">
@@ -260,6 +279,65 @@ export default function Admin() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Top Resources Summary */}
+      <Card className="border-0 shadow-sm mb-6">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Award className="h-4 w-4" /> Top Resources
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingBookings ? (
+            <div className="h-40 flex items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+            </div>
+          ) : topResources.length > 0 ? (
+            <div className="space-y-3">
+              {topResources.map((resource, index) => {
+                const maxBookings = topResources[0]?.count ?? 1;
+                const barPercentage =
+                  maxBookings > 0 ? (resource.count / maxBookings) * 100 : 0;
+                const colors = [
+                  "from-blue-400 to-blue-500",
+                  "from-purple-400 to-purple-500",
+                  "from-pink-400 to-pink-500",
+                  "from-indigo-400 to-indigo-500",
+                  "from-cyan-400 to-cyan-500",
+                ];
+
+                return (
+                  <div key={resource.name} className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-sm font-semibold text-slate-700 flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-slate-700 truncate">
+                          {resource.name}
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          {resource.count} booking{resource.count !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full bg-gradient-to-r ${colors[index]} rounded-full transition-all`}
+                          style={{ width: `${barPercentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="h-40 flex items-center justify-center text-sm text-slate-500">
+              No booking data available yet.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Service Level Timers */}
       <Card className="border-0 shadow-sm">
