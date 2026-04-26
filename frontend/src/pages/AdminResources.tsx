@@ -133,6 +133,7 @@ export default function AdminResources() {
     if (!form.location.trim()) return toast.error("Location is required");
     if (!form.status) return toast.error("Status is required");
     if (selectedRoles.length === 0) return toast.error("Please select access roles");
+    if (!form.description.trim()) return toast.error("Description is required");
     if (form.capacity && (isNaN(Number(form.capacity)) || Number(form.capacity) < 0)) {
       return toast.error("Capacity must be a positive number");
     }
@@ -423,7 +424,7 @@ export default function AdminResources() {
             <Button
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white mt-2"
               onClick={handleSubmit}
-              disabled={!form.name || !form.location || !form.status || form.allowedRoles.length === 0 || createMutation.isPending || updateMutation.isPending}
+              disabled={!form.name || !form.location || !form.status || form.allowedRoles.length === 0 || !form.description.trim() || createMutation.isPending || updateMutation.isPending}
             >
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {editId ? "Update Resource" : "Create Resource"}
