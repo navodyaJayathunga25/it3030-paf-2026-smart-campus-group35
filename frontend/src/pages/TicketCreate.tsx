@@ -82,6 +82,29 @@ const priorityOptions: {
 
 const MAX_DESCRIPTION = 1000;
 
+// Accepts Sri Lankan mobile formats:
+//   +94XXXXXXXXX  (country code + 9 digits, first must be 7)
+//   0XXXXXXXXX    (local: 0 + 9 digits, starts with 07)
+// Spaces, dashes and parentheses are allowed in the input and stripped before checking.
+const PHONE_REGEX = /^(?:\+94|0)7\d{8}$/;
+
+function normalizePhone(value: string): string {
+  return value.replace(/[\s\-()]/g, "");
+}
+
+function validatePhone(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return ""; // optional field
+  const normalized = normalizePhone(trimmed);
+  if (!/^[+\d]+$/.test(normalized)) {
+    return "Phone can only contain digits, spaces, '+', '-' or parentheses.";
+  }
+  if (!PHONE_REGEX.test(normalized)) {
+    return "Enter a valid phone number, e.g. +94 77 123 4567 or 077 123 4567.";
+  }
+  return "";
+}
+
 export default function TicketCreate() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -195,12 +218,15 @@ export default function TicketCreate() {
     setFiles(files.filter((_, i) => i !== index));
   };
 
+  const contactPhoneError = validatePhone(contactPhone);
+
   const isFormValid =
     category.trim().length > 0 &&
     priority !== "" &&
     location.trim().length > 0 &&
     description.trim().length > 0 &&
-    contactEmail.trim().length > 0;
+    contactEmail.trim().length > 0 &&
+    contactPhoneError === "";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -577,11 +603,27 @@ export default function TicketCreate() {
                   </span>
                 </Label>
                 <Input
+                  type="tel"
+                  inputMode="tel"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
+                  onBlur={(e) =>
+                    setContactPhone(normalizePhone(e.target.value.trim()))
+                  }
                   placeholder="+94 77 123 4567"
-                  className="h-10"
+                  aria-invalid={!!contactPhoneError}
+                  className={cn(
+                    "h-10",
+                    contactPhoneError &&
+                      "border-red-400 focus-visible:ring-red-400",
+                  )}
                 />
+                {contactPhoneError && (
+                  <p className="text-xs text-red-600 flex items-center gap-1 pt-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {contactPhoneError}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
