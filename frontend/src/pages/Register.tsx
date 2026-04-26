@@ -31,10 +31,62 @@ export default function Register() {
   const [department, setDepartment] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+  }>({});
+  const [serverError, setServerError] = useState("");
+
+  const getNameValidationMessage = (value: string) => {
+    if (!value.trim()) {
+      return "Full name is required.";
+    }
+    return "";
+  };
+
+  const getEmailValidationMessage = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "University email is required.";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return "Enter a valid email address.";
+    }
+    return "";
+  };
+
+  const getPasswordValidationMessage = (value: string) => {
+    if (!value) {
+      return "Password is required.";
+    }
+    if (value.length < 8) {
+      return "Password must be at least 8 characters.";
+    }
+    return "";
+  };
+
+  const validateForm = () => {
+    const nextErrors = {
+      name: getNameValidationMessage(name),
+      email: getEmailValidationMessage(email),
+      password: getPasswordValidationMessage(password),
+    };
+
+    setErrors({
+      name: nextErrors.name || undefined,
+      email: nextErrors.email || undefined,
+      password: nextErrors.password || undefined,
+    });
+
+    return !nextErrors.name && !nextErrors.email && !nextErrors.password;
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || password.length < 8) {
+    setServerError("");
+
+    if (!validateForm()) {
       toast.error("Please fill all fields. Password must be at least 8 characters.");
       return;
     }
@@ -51,6 +103,7 @@ export default function Register() {
       const msg = axios.isAxiosError(err)
         ? err.response?.data?.message ?? "Registration failed. Please try again."
         : "Registration failed. Please try again.";
+      setServerError(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -142,7 +195,7 @@ export default function Register() {
             </span>
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleRegister} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium text-slate-700">
                 Full Name
@@ -154,10 +207,23 @@ export default function Register() {
                   placeholder="John Doe"
                   className="pl-10 h-11"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setName(value);
+                    setErrors((prev) => ({
+                      ...prev,
+                      name: getNameValidationMessage(value) || undefined,
+                    }));
+                    if (serverError) {
+                      setServerError("");
+                    }
+                  }}
+                  aria-invalid={!!errors.name}
                 />
               </div>
+              {errors.name && (
+                <p className="text-xs font-medium text-red-600">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-slate-700">
@@ -171,10 +237,23 @@ export default function Register() {
                   placeholder="you@campus.edu"
                   className="pl-10 h-11"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEmail(value);
+                    setErrors((prev) => ({
+                      ...prev,
+                      email: getEmailValidationMessage(value) || undefined,
+                    }));
+                    if (serverError) {
+                      setServerError("");
+                    }
+                  }}
+                  aria-invalid={!!errors.email}
                 />
               </div>
+              {errors.email && (
+                <p className="text-xs font-medium text-red-600">{errors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="department" className="text-sm font-medium text-slate-700">
@@ -206,12 +285,28 @@ export default function Register() {
                   placeholder="At least 8 characters"
                   className="pl-10 h-11"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPassword(value);
+                    setErrors((prev) => ({
+                      ...prev,
+                      password: getPasswordValidationMessage(value) || undefined,
+                    }));
+                    if (serverError) {
+                      setServerError("");
+                    }
+                  }}
                   minLength={8}
-                  required
+                  aria-invalid={!!errors.password}
                 />
               </div>
+              {errors.password && (
+                <p className="text-xs font-medium text-red-600">{errors.password}</p>
+              )}
             </div>
+            {serverError && (
+              <p className="text-sm font-medium text-red-600">{serverError}</p>
+            )}
             <Button
               type="submit"
               disabled={loading}
