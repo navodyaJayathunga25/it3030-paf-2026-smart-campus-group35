@@ -400,8 +400,23 @@ export default function AdminResources() {
                   <p className="text-xs text-slate-500">Select one or both roles. If both User and Lecturer should access, select both.</p>
                 </div>
                 <div className="col-span-2 space-y-1">
-                  <Label>Description</Label>
-                  <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
+                  <div className="flex items-center justify-between">
+                    <Label>Description</Label>
+                    <span className={`text-xs font-medium ${form.description.length > 400 ? "text-orange-600" : form.description.length > 450 ? "text-red-600" : "text-slate-500"}`}>
+                      {form.description.length}/500
+                    </span>
+                  </div>
+                  <Textarea 
+                    value={form.description} 
+                    onChange={(e) => {
+                      if (e.target.value.length <= 500) {
+                        setForm({ ...form, description: e.target.value });
+                      }
+                    }} 
+                    rows={3}
+                    placeholder="Enter description (max 500 characters)"
+                    className={form.description.length > 450 ? "border-red-300 focus:border-red-500" : ""}
+                  />
                 </div>
               </div>
             </div>
