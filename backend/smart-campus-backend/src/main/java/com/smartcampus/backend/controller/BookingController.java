@@ -10,10 +10,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -30,6 +32,28 @@ public class BookingController {
     public ResponseEntity<ApiResponse<List<Booking>>> getBookings(
         @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(ApiResponse.success(bookingService.getBookingsForUser(currentUser)));
+    }
+
+    /**
+     * GET /api/bookings/admin - List all bookings (ADMIN only)
+     */
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<Booking>>> getAllBookingsForAdmin() {
+        return ResponseEntity.ok(ApiResponse.success(bookingService.getAllBookingsForAdmin()));
+    }
+
+    /**
+     * GET /api/bookings/availability - Get approved bookings for a resource/date
+     */
+    @GetMapping("/availability")
+    public ResponseEntity<ApiResponse<List<Booking>>> getApprovedBookingsForDate(
+        @RequestParam String resourceId,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+        @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(
+            ApiResponse.success(bookingService.getApprovedBookingsForDate(resourceId, date, currentUser))
+        );
     }
 
     /**
@@ -91,6 +115,17 @@ public class BookingController {
         return ResponseEntity.ok(
             ApiResponse.success("Booking cancelled", bookingService.cancelBooking(id, currentUser))
         );
+    }
+
+    /**
+     * DELETE /api/bookings/{id} - Permanently delete a cancelled booking
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteCancelledBooking(
+        @PathVariable String id,
+        @AuthenticationPrincipal User currentUser) {
+        bookingService.deleteCancelledBooking(id, currentUser);
+        return ResponseEntity.ok(ApiResponse.success("Cancelled booking deleted", null));
     }
 }
 

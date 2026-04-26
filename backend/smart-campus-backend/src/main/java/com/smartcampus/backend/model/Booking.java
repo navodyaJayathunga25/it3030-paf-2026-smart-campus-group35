@@ -25,6 +25,8 @@ public class Booking {
 
     private String userId;
     private String userName;
+    @Builder.Default
+    private String userRole = "USER";
 
     private String resourceId;
     private String resourceName;

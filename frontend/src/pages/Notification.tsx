@@ -1,12 +1,22 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { notificationService } from "@/services/notificationService";
-import type { NotificationType } from "@/lib/types";
-import { Bell, CalendarCheck, Wrench, MessageSquare, CheckCheck, Circle, Loader2, UserPlus } from "lucide-react";
+import type { Notification, NotificationType } from "@/lib/types";
+import { Bell, CalendarCheck, Wrench, MessageSquare, CheckCheck, Circle, Loader2, UserPlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const typeIcons: Record<NotificationType, React.ElementType> = {
@@ -25,11 +35,14 @@ const typeColors: Record<NotificationType, string> = {
 
 export default function Notifications() {
   const [filter, setFilter] = useState<string>("ALL");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications"],
     queryFn: notificationService.getAll,
+    refetchInterval: 30_000,
   });
 
   const markAllMutation = useMutation({
@@ -49,11 +62,53 @@ export default function Notifications() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => notificationService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
+      toast.success("Notification deleted");
+      setDeleteTarget(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message ?? "Failed to delete notification");
+    },
+  });
+
   const filtered = filter === "ALL"
     ? notifications
     : filter === "UNREAD"
     ? notifications.filter((n) => !n.read)
     : notifications.filter((n) => n.type === filter);
+
+  const getNotificationLink = (notif: Notification): string => {
+    if (notif.link && notif.link.trim().length > 0) {
+      return notif.link;
+    }
+
+    if (notif.type === "BOOKING") {
+      return notif.referenceId ? `/bookings/${notif.referenceId}` : "/bookings";
+    }
+    if (notif.type === "TICKET" || notif.type === "COMMENT") {
+      return notif.referenceId ? `/tickets/${notif.referenceId}` : "/tickets";
+    }
+    if (notif.type === "USER") {
+      return "/admin/users";
+    }
+    return "/notifications";
+  };
+
+  const handleNotificationOpen = async (notif: Notification) => {
+    const target = getNotificationLink(notif);
+    if (!notif.read) {
+      try {
+        await markReadMutation.mutateAsync(notif.id);
+      } catch {
+        // Continue navigation even if read-state update fails.
+      }
+    }
+    navigate(target);
+  };
 
   if (isLoading) return (
     <AppLayout title="Notifications" subtitle="Stay updated on your bookings and tickets">
@@ -95,31 +150,52 @@ export default function Notifications() {
           const Icon = typeIcons[notif.type];
           const colorClass = typeColors[notif.type];
           return (
-            <Link
+            <Card
               key={notif.id}
-              to={notif.link ?? "#"}
-              onClick={() => !notif.read && markReadMutation.mutate(notif.id)}
-            >
-              <Card className={`border-0 shadow-sm hover:shadow-md transition-all cursor-pointer ${
+              className={`border-0 shadow-sm hover:shadow-md transition-all ${
                 !notif.read ? "bg-blue-50/50 border-l-4 border-l-blue-500" : ""
-              }`}>
-                <CardContent className="p-4 flex items-start gap-4">
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorClass}`}>
-                    <Icon className="h-5 w-5" />
+              }`}
+            >
+              <CardContent className="p-4 flex items-start gap-4">
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorClass}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <button
+                      type="button"
+                      onClick={() => handleNotificationOpen(notif)}
+                      className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                    >
+                      {notif.title}
+                    </button>
+                    {!notif.read && <Circle className="h-2 w-2 fill-blue-500 text-blue-500" />}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-semibold text-slate-900">{notif.title}</h3>
-                      {!notif.read && <Circle className="h-2 w-2 fill-blue-500 text-blue-500" />}
+                  <p className="text-sm text-slate-600">{notif.message}</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {new Date(notif.createdAt).toLocaleString()}
+                  </p>
+                  {notif.read && (
+                    <div className="mt-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs text-slate-500 hover:text-red-600"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setDeleteTarget({ id: notif.id, title: notif.title });
+                        }}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Delete
+                      </Button>
                     </div>
-                    <p className="text-sm text-slate-600">{notif.message}</p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {new Date(notif.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
@@ -130,6 +206,32 @@ export default function Notifications() {
           <p className="text-slate-500">No notifications</p>
         </div>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
+          <AlertDialogHeader className="text-left">
+            <div className="mb-1 inline-flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+              <Trash2 className="h-5 w-5" />
+            </div>
+            <AlertDialogTitle className="text-slate-900">Delete read notification?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600">
+              This will permanently remove "{deleteTarget?.title}" from your notifications.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-500 text-white hover:bg-rose-600"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              disabled={deleteMutation.isPending}
+            >
+              Delete notification
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
