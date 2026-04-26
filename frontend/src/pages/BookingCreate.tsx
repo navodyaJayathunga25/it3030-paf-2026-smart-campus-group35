@@ -27,6 +27,8 @@ export default function BookingCreate() {
   const [purpose, setPurpose] = useState("");
   const [attendees, setAttendees] = useState("");
 
+  const PURPOSE_MAX_LENGTH = 500;
+
   const slotIntervals = useMemo(
     () =>
       timeSlots.slice(0, -1).map((start, index) => ({
@@ -297,12 +299,22 @@ export default function BookingCreate() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Purpose</Label>
+                  <div className="flex justify-between items-center">
+                    <Label>Purpose</Label>
+                    <span className="text-xs text-slate-500">
+                      {purpose.length}/{PURPOSE_MAX_LENGTH}
+                    </span>
+                  </div>
                   <Textarea
                     value={purpose}
-                    onChange={(e) => setPurpose(e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value.length <= PURPOSE_MAX_LENGTH) {
+                        setPurpose(e.target.value);
+                      }
+                    }}
                     placeholder="Describe the purpose of your booking..."
                     rows={4}
+                    maxLength={PURPOSE_MAX_LENGTH}
                   />
                 </div>
 
