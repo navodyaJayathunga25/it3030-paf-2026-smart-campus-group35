@@ -51,6 +51,7 @@ export default function AdminResources() {
   const [editId, setEditId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [capacityError, setCapacityError] = useState<string>("");
   const queryClient = useQueryClient();
 
   const { data: resources = [], isLoading } = useQuery({
@@ -201,6 +202,7 @@ export default function AdminResources() {
       allowedRoles: (resource.allowedRoles ?? []).filter((role) => ALLOWED_ROLE_VALUES.includes(role)),
     });
     setEditId(resource.id);
+    setCapacityError("");
     setDialogOpen(true);
   };
 
@@ -238,7 +240,7 @@ export default function AdminResources() {
           </SelectContent>
         </Select>
 
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditId(null); setForm(emptyForm); } }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditId(null); setForm(emptyForm); setCapacityError(""); } }}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md h-11">
               <Plus className="h-4 w-4 mr-2" /> Add Resource
@@ -283,17 +285,25 @@ export default function AdminResources() {
                 <div className="space-y-1">
                   <Label>Capacity</Label>
                   <Input 
-                    type="number" 
+                    type="text"
+                    inputMode="numeric"
                     value={form.capacity} 
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (val === "" || /^\d+$/.test(val)) {
+                      if (val === "") {
+                        setForm({ ...form, capacity: "" });
+                        setCapacityError("");
+                      } else if (/^\d+$/.test(val)) {
                         setForm({ ...form, capacity: val });
+                        setCapacityError("");
+                      } else {
+                        setCapacityError("Only numbers are allowed in Capacity field");
                       }
                     }} 
-                    placeholder="0" 
-                    min="0"
+                    placeholder="0"
+                    className={capacityError ? "border-red-500" : ""}
                   />
+                  {capacityError && <p className="text-red-500 text-sm mt-1">{capacityError}</p>}
                 </div>
                 <div className="col-span-2 space-y-2">
                   <Label>Availability</Label>
