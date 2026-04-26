@@ -25,7 +25,9 @@ export default function BookingCreate() {
   const [date, setDate] = useState("");
   const [selectedSlotIndexes, setSelectedSlotIndexes] = useState<number[]>([]);
   const [purpose, setPurpose] = useState("");
-  const [attendees, setAttendees] = useState("1");
+  const [attendees, setAttendees] = useState("");
+
+  const PURPOSE_MAX_LENGTH = 500;
 
   const slotIntervals = useMemo(
     () =>
@@ -166,6 +168,13 @@ export default function BookingCreate() {
       toast.error("End time must be after start time");
       return;
     }
+    const parsedAttendees = parseInt(attendees) || 1;
+    if (selectedResourceObj?.capacity && parsedAttendees > selectedResourceObj.capacity) {
+      toast.error(
+        `Expected attendees cannot exceed the resource's capacity of ${selectedResourceObj.capacity}`
+      );
+      return;
+    }
     mutation.mutate();
   };
 
@@ -176,7 +185,8 @@ export default function BookingCreate() {
     !!endTime &&
     !!purpose &&
     isSlotSelectionContiguous &&
-    !mutation.isPending;
+    !mutation.isPending &&
+    (!selectedResourceObj?.capacity || parseInt(attendees) <= selectedResourceObj.capacity);
 
   return (
     <AppLayout title="Create Booking" subtitle="Request a resource booking">
@@ -289,24 +299,48 @@ export default function BookingCreate() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Purpose</Label>
+                  <div className="flex justify-between items-center">
+                    <Label>Purpose</Label>
+                    <span className="text-xs text-slate-500">
+                      {purpose.length}/{PURPOSE_MAX_LENGTH}
+                    </span>
+                  </div>
                   <Textarea
                     value={purpose}
-                    onChange={(e) => setPurpose(e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value.length <= PURPOSE_MAX_LENGTH) {
+                        setPurpose(e.target.value);
+                      }
+                    }}
                     placeholder="Describe the purpose of your booking..."
                     rows={4}
+                    maxLength={PURPOSE_MAX_LENGTH}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Expected Attendees</Label>
+                  <Label>
+                    Expected Attendees
+                    {selectedResourceObj?.capacity && (
+                      <span className="text-xs text-slate-500 ml-1">
+                        (Max: {selectedResourceObj.capacity})
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     type="number"
                     min="1"
+                    max={selectedResourceObj?.capacity || undefined}
                     value={attendees}
                     onChange={(e) => setAttendees(e.target.value)}
                     placeholder="Number of attendees"
                   />
+                  {parseInt(attendees) > (selectedResourceObj?.capacity || 0) &&
+                    selectedResourceObj?.capacity && (
+                      <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                        Attendees exceed the resource capacity of {selectedResourceObj.capacity}
+                      </p>
+                    )}
                 </div>
               </CardContent>
             </Card>
