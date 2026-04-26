@@ -41,6 +41,7 @@ public class AdminController {
         long inProgressTickets = ticketRepository.countByStatus(TicketStatus.IN_PROGRESS);
         long resolvedTickets = ticketRepository.countByStatus(TicketStatus.RESOLVED);
         long closedTickets = ticketRepository.countByStatus(TicketStatus.CLOSED);
+        long rejectedTickets = ticketRepository.countByStatus(TicketStatus.REJECTED);
 
         long totalResources = resourceRepository.count();
         long totalUsers = userRepository.count();
@@ -53,6 +54,7 @@ public class AdminController {
         stats.put("inProgressTickets", inProgressTickets);
         stats.put("resolvedTickets", resolvedTickets);
         stats.put("closedTickets", closedTickets);
+        stats.put("rejectedTickets", rejectedTickets);
         stats.put("totalResources", totalResources);
         stats.put("totalUsers", totalUsers);
 
