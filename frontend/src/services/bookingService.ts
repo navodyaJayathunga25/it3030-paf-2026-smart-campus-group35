@@ -22,6 +22,18 @@ export const bookingService = {
     return data.data;
   },
 
+  async getAllForAdmin(): Promise<Booking[]> {
+    const { data } = await apiClient.get<ApiResponse<Booking[]>>('/bookings/admin');
+    return data.data;
+  },
+
+  async getApprovedByResourceAndDate(resourceId: string, date: string): Promise<Booking[]> {
+    const { data } = await apiClient.get<ApiResponse<Booking[]>>('/bookings/availability', {
+      params: { resourceId, date },
+    });
+    return data.data;
+  },
+
   async getById(id: string): Promise<Booking> {
     const { data } = await apiClient.get<ApiResponse<Booking>>(`/bookings/${id}`);
     return data.data;
@@ -45,5 +57,9 @@ export const bookingService = {
   async cancel(id: string): Promise<Booking> {
     const { data } = await apiClient.put<ApiResponse<Booking>>(`/bookings/${id}/cancel`);
     return data.data;
+  },
+
+  async deleteCancelled(id: string): Promise<void> {
+    await apiClient.delete<ApiResponse<null>>(`/bookings/${id}`);
   },
 };

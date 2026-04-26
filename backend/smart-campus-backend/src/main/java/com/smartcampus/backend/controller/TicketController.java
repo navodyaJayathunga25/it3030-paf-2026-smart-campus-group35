@@ -85,6 +85,17 @@ public class TicketController {
         );
     }
 
+    /**
+     * DELETE /api/tickets/{id} - Delete a ticket (owner: REJECTED only; ADMIN: any)
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteTicket(
+        @PathVariable String id,
+        @AuthenticationPrincipal User currentUser) {
+        ticketService.deleteTicket(id, currentUser);
+        return ResponseEntity.ok(ApiResponse.success("Ticket deleted", null));
+    }
+
     // --- Comments ---
 
     /**

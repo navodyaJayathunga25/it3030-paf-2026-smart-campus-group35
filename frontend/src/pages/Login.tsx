@@ -13,15 +13,17 @@ import axios from "axios";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { isAuthenticated, refreshUser } = useAuth();
+  const { isAuthenticated, refreshUser, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   // Already logged in → go to dashboard
   if (isAuthenticated) {
-    navigate("/dashboard", { replace: true });
+    navigate(user?.role === "ADMIN" ? "/admin" : "/dashboard", { replace: true });
     return null;
   }
 
@@ -30,17 +32,41 @@ export default function Login() {
     authService.loginWithGoogle();
   };
 
+  const getEmailValidationMessage = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "Email is required.";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return "Enter a valid email address.";
+    }
+    return "";
+  };
+
+  const getPasswordValidationMessage = (value: string) => {
+    if (!value) {
+      return "Password is required.";
+    }
+    return "";
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) {
+
+    const currentEmailError = getEmailValidationMessage(email);
+    const currentPasswordError = getPasswordValidationMessage(password);
+    setEmailError(currentEmailError);
+    setPasswordError(currentPasswordError);
+
+    if (currentEmailError || currentPasswordError) {
       toast.error("Enter your email and password.");
       return;
     }
     setEmailLoading(true);
     try {
-      await authService.loginWithEmail({ email: email.trim(), password });
+      const result = await authService.loginWithEmail({ email: email.trim(), password });
       await refreshUser();
-      navigate("/dashboard", { replace: true });
+      navigate(result.user.role === "ADMIN" ? "/admin" : "/dashboard", { replace: true });
     } catch (err) {
       const msg = axios.isAxiosError(err)
         ? err.response?.data?.message ?? "Sign in failed."
@@ -67,7 +93,7 @@ export default function Login() {
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
               <span className="text-xl font-bold text-slate-900">
-                smartcampus
+                SMART CAMPUS
               </span>
             </Link>
             <h2 className="text-2xl font-bold text-slate-900">Welcome Back</h2>
@@ -116,7 +142,7 @@ export default function Login() {
           </div>
 
           {/* Email Form */}
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+          <form onSubmit={handleEmailLogin} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label
                 htmlFor="email"
@@ -132,10 +158,17 @@ export default function Login() {
                   placeholder="you@campus.edu"
                   className="pl-10 h-11"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEmail(value);
+                    setEmailError(getEmailValidationMessage(value));
+                  }}
+                  aria-invalid={!!emailError}
                 />
               </div>
+              {emailError && (
+                <p className="text-xs font-medium text-red-600">{emailError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label
@@ -152,10 +185,17 @@ export default function Login() {
                   placeholder="••••••••"
                   className="pl-10 h-11"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPassword(value);
+                    setPasswordError(getPasswordValidationMessage(value));
+                  }}
+                  aria-invalid={!!passwordError}
                 />
               </div>
+              {passwordError && (
+                <p className="text-xs font-medium text-red-600">{passwordError}</p>
+              )}
             </div>
             <Button
               type="submit"

@@ -10,16 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { ResourceStatusBadge } from "@/components/StatusBadge";
 import { resourceService } from "@/services/resourceService";
-import { getResourceTypeIcon, getResourceTypeLabel } from "@/lib/types";
+import { getResourceTypeIcon, getResourceTypeLabel, timeSlots } from "@/lib/types";
 import type { Resource } from "@/lib/types";
 import { Search, Plus, Pencil, Trash2, MapPin, Users, Loader2, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
-  const hour = i.toString().padStart(2, "0");
-  return `${hour}:00`;
-});
+const START_TIME_OPTIONS = timeSlots.slice(0, -1);
+const END_TIME_OPTIONS = timeSlots.slice(1);
 
 const ROLE_OPTIONS = [
   { value: "USER", label: "User" },
@@ -40,6 +38,12 @@ const emptyForm = {
   allowedRoles: [] as string[],
 };
 
+const availabilityTimeOptionsAreValid = (fromTime: string, toTime: string) => {
+  const fromIndex = timeSlots.indexOf(fromTime);
+  const toIndex = timeSlots.indexOf(toTime);
+  return fromIndex >= 0 && toIndex >= 0 && fromIndex < toIndex;
+};
+
 export default function AdminResources() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
@@ -47,6 +51,7 @@ export default function AdminResources() {
   const [editId, setEditId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [capacityError, setCapacityError] = useState<string>("");
   const queryClient = useQueryClient();
 
   const { data: resources = [], isLoading } = useQuery({
@@ -96,7 +101,7 @@ export default function AdminResources() {
   const addAvailabilitySlot = () => {
     setForm({
       ...form,
-      availabilitySlots: [...form.availabilitySlots, { days: [], fromTime: "08:00", toTime: "18:00" }],
+      availabilitySlots: [...form.availabilitySlots, { days: [], fromTime: "08:00", toTime: "08:30" }],
     });
   };
 
@@ -128,8 +133,20 @@ export default function AdminResources() {
     if (!form.location.trim()) return toast.error("Location is required");
     if (!form.status) return toast.error("Status is required");
     if (selectedRoles.length === 0) return toast.error("Please select access roles");
+    if (!form.description.trim()) return toast.error("Description is required");
     if (form.capacity && (isNaN(Number(form.capacity)) || Number(form.capacity) < 0)) {
       return toast.error("Capacity must be a positive number");
+    }
+
+    const invalidSlot = form.availabilitySlots.find((slot) => {
+      if (slot.days.length === 0) return true;
+      if (!timeSlots.includes(slot.fromTime) || !timeSlots.includes(slot.toTime)) return true;
+      if (!availabilityTimeOptionsAreValid(slot.fromTime, slot.toTime)) return true;
+      return false;
+    });
+
+    if (invalidSlot) {
+      return toast.error("Each time slot must use 30-minute intervals between 08:00 and 20:00, and the end time must be after the start time.");
     }
 
     // Build availability windows string
@@ -186,7 +203,17 @@ export default function AdminResources() {
       allowedRoles: (resource.allowedRoles ?? []).filter((role) => ALLOWED_ROLE_VALUES.includes(role)),
     });
     setEditId(resource.id);
+    setCapacityError("");
     setDialogOpen(true);
+  };
+
+  const getResourceDescription = (resource: Resource) => {
+    const customDescription = resource.description?.trim();
+    if (customDescription) return customDescription;
+
+    const typeLabel = getResourceTypeLabel(resource.type);
+    const capacityPart = resource.capacity ? ` with capacity for ${resource.capacity} people` : "";
+    return `${typeLabel} located at ${resource.location}${capacityPart}.`;
   };
 
   return (
@@ -214,7 +241,7 @@ export default function AdminResources() {
           </SelectContent>
         </Select>
 
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditId(null); setForm(emptyForm); } }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditId(null); setForm(emptyForm); setCapacityError(""); } }}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md h-11">
               <Plus className="h-4 w-4 mr-2" /> Add Resource
@@ -259,17 +286,25 @@ export default function AdminResources() {
                 <div className="space-y-1">
                   <Label>Capacity</Label>
                   <Input 
-                    type="number" 
+                    type="text"
+                    inputMode="numeric"
                     value={form.capacity} 
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (val === "" || /^\d+$/.test(val)) {
+                      if (val === "") {
+                        setForm({ ...form, capacity: "" });
+                        setCapacityError("");
+                      } else if (/^\d+$/.test(val)) {
                         setForm({ ...form, capacity: val });
+                        setCapacityError("");
+                      } else {
+                        setCapacityError("Only numbers are allowed in Capacity field");
                       }
                     }} 
-                    placeholder="0" 
-                    min="0"
+                    placeholder="0"
+                    className={capacityError ? "border-red-500" : ""}
                   />
+                  {capacityError && <p className="text-red-500 text-sm mt-1">{capacityError}</p>}
                 </div>
                 <div className="col-span-2 space-y-2">
                   <Label>Availability</Label>
@@ -298,7 +333,7 @@ export default function AdminResources() {
                       >
                         <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {TIME_OPTIONS.map((t) => (
+                          {START_TIME_OPTIONS.map((t) => (
                             <SelectItem key={t} value={t}>{t}</SelectItem>
                           ))}
                         </SelectContent>
@@ -310,7 +345,7 @@ export default function AdminResources() {
                       >
                         <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {TIME_OPTIONS.map((t) => (
+                          {END_TIME_OPTIONS.map((t) => (
                             <SelectItem key={t} value={t}>{t}</SelectItem>
                           ))}
                         </SelectContent>
@@ -366,15 +401,30 @@ export default function AdminResources() {
                   <p className="text-xs text-slate-500">Select one or both roles. If both User and Lecturer should access, select both.</p>
                 </div>
                 <div className="col-span-2 space-y-1">
-                  <Label>Description</Label>
-                  <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
+                  <div className="flex items-center justify-between">
+                    <Label>Description</Label>
+                    <span className={`text-xs font-medium ${form.description.length > 400 ? "text-orange-600" : form.description.length > 450 ? "text-red-600" : "text-slate-500"}`}>
+                      {form.description.length}/500
+                    </span>
+                  </div>
+                  <Textarea 
+                    value={form.description} 
+                    onChange={(e) => {
+                      if (e.target.value.length <= 500) {
+                        setForm({ ...form, description: e.target.value });
+                      }
+                    }} 
+                    rows={3}
+                    placeholder="Enter description (max 500 characters)"
+                    className={form.description.length > 450 ? "border-red-300 focus:border-red-500" : ""}
+                  />
                 </div>
               </div>
             </div>
             <Button
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white mt-2"
               onClick={handleSubmit}
-              disabled={!form.name || !form.location || !form.status || form.allowedRoles.length === 0 || createMutation.isPending || updateMutation.isPending}
+              disabled={!form.name || !form.location || !form.status || form.allowedRoles.length === 0 || !form.description.trim() || createMutation.isPending || updateMutation.isPending}
             >
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {editId ? "Update Resource" : "Create Resource"}
@@ -403,6 +453,9 @@ export default function AdminResources() {
                         <ResourceStatusBadge status={resource.status} />
                         <span className="text-xs text-slate-500">{getResourceTypeLabel(resource.type)}</span>
                       </div>
+                      <p className="text-xs text-slate-600 mb-2 max-w-2xl leading-relaxed line-clamp-2">
+                        {getResourceDescription(resource)}
+                      </p>
                       <div className="flex items-center gap-4 text-xs text-slate-500">
                         <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{resource.location}</span>
                         {resource.capacity && <span className="flex items-center gap-1"><Users className="h-3 w-3" />Cap: {resource.capacity}</span>}
