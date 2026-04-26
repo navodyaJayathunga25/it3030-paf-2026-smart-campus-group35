@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,15 @@ import {
 import { ticketService } from "@/services/ticketService";
 import { resourceService } from "@/services/resourceService";
 import { useAuth } from "@/context/AuthContext";
-import { ticketCategories } from "@/lib/types";
-import type { TicketPriority } from "@/lib/types";
+import { ticketCategories, getResourceTypeLabel, getResourceTypeIcon } from "@/lib/types";
+import type { TicketPriority, ResourceType } from "@/lib/types";
+
+const resourceTypeOptions: ResourceType[] = [
+  "LECTURE_HALL",
+  "LAB",
+  "MEETING_ROOM",
+  "EQUIPMENT",
+];
 import { uploadManyToCloudinary } from "@/lib/cloudinary";
 import {
   ArrowLeft,
@@ -75,25 +82,57 @@ const priorityOptions: {
 
 const MAX_DESCRIPTION = 1000;
 
+// Accepts Sri Lankan mobile formats:
+//   +94XXXXXXXXX  (country code + 9 digits, first must be 7)
+//   0XXXXXXXXX    (local: 0 + 9 digits, starts with 07)
+// Spaces, dashes and parentheses are allowed in the input and stripped before checking.
+const PHONE_REGEX = /^(?:\+94|0)7\d{8}$/;
+
+function normalizePhone(value: string): string {
+  return value.replace(/[\s\-()]/g, "");
+}
+
+function validatePhone(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return ""; // optional field
+  const normalized = normalizePhone(trimmed);
+  if (!/^[+\d]+$/.test(normalized)) {
+    return "Phone can only contain digits, spaces, '+', '-' or parentheses.";
+  }
+  if (!PHONE_REGEX.test(normalized)) {
+    return "Enter a valid phone number, e.g. +94 77 123 4567 or 077 123 4567.";
+  }
+  return "";
+}
+
 export default function TicketCreate() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [category, setCategory] = useState("");
   const [priority, setPriority] = useState<TicketPriority | "">("");
+  const [resourceType, setResourceType] = useState<ResourceType | "">("");
   const [resourceId, setResourceId] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [contactEmail, setContactEmail] = useState(user?.email ?? "");
   const [contactPhone, setContactPhone] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [locationAutoFilled, setLocationAutoFilled] = useState(false);
 
   const { data: resources = [] } = useQuery({
     queryKey: ["resources"],
     queryFn: () => resourceService.getAll({ status: "ACTIVE" }),
   });
+
+  const filteredResources = useMemo(
+    () =>
+      resourceType
+        ? resources.filter((r) => r.type === resourceType)
+        : [],
+    [resources, resourceType],
+  );
 
   const selectedResource = useMemo(
     () => resources.find((r) => r.id === resourceId),
@@ -107,19 +146,27 @@ export default function TicketCreate() {
     [files],
   );
 
-  const handleResourceChange = (v: string) => {
+  const handleResourceTypeChange = (v: string) => {
+    const next = v === "none" ? "" : (v as ResourceType);
+    setResourceType(next);
+    setResourceId("");
+    setLocation("");
+    setLocationChoice("none");
+  };
+
+  const [locationChoice, setLocationChoice] = useState<string>("none");
+
+  const handleLocationResourceChange = (v: string) => {
+    setLocationChoice(v);
+    if (v === "other") {
+      setResourceId("");
+      setLocation("");
+      return;
+    }
     const id = v === "none" ? "" : v;
     setResourceId(id);
-    if (id) {
-      const picked = resources.find((r) => r.id === id);
-      if (picked?.location && (!location || locationAutoFilled)) {
-        setLocation(picked.location);
-        setLocationAutoFilled(true);
-      }
-    } else if (locationAutoFilled) {
-      setLocation("");
-      setLocationAutoFilled(false);
-    }
+    const picked = resources.find((r) => r.id === id);
+    setLocation(picked?.location ?? "");
   };
 
   const mutation = useMutation({
@@ -146,6 +193,8 @@ export default function TicketCreate() {
     },
     onSuccess: (ticket) => {
       toast.success("Ticket created successfully");
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
       navigate(`/tickets/${ticket.id}`);
     },
     onError: (err: any) =>
@@ -169,9 +218,19 @@ export default function TicketCreate() {
     setFiles(files.filter((_, i) => i !== index));
   };
 
+  const contactPhoneError = validatePhone(contactPhone);
+
+  const isFormValid =
+    category.trim().length > 0 &&
+    priority !== "" &&
+    location.trim().length > 0 &&
+    description.trim().length > 0 &&
+    contactEmail.trim().length > 0 &&
+    contactPhoneError === "";
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!category || !priority || !location || !description || !contactEmail) {
+    if (!isFormValid) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -193,7 +252,8 @@ export default function TicketCreate() {
         <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
-      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
         {/* Section: Issue Details */}
         <Card className="border border-slate-200 shadow-sm">
           <CardHeader className="border-b bg-slate-50/60">
@@ -238,29 +298,26 @@ export default function TicketCreate() {
                   </span>
                 </Label>
                 <Select
-                  value={resourceId || "none"}
-                  onValueChange={handleResourceChange}
+                  value={resourceType || "none"}
+                  onValueChange={handleResourceTypeChange}
                 >
                   <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select a resource" />
+                    <SelectValue placeholder="Select a resource type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {resources.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                        <span className="text-slate-400 ml-2 text-xs">
-                          {r.location}
-                        </span>
+                    {resourceTypeOptions.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        <span className="mr-2">{getResourceTypeIcon(t)}</span>
+                        {getResourceTypeLabel(t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {selectedResource && (
+                {resourceType && (
                   <p className="text-xs text-slate-500 flex items-center gap-1 pt-1">
                     <Info className="h-3 w-3" />
-                    {selectedResource.type.replace("_", " ")} ·{" "}
-                    {selectedResource.location}
+                    {filteredResources.length} resource(s) available
                   </p>
                 )}
               </div>
@@ -361,23 +418,66 @@ export default function TicketCreate() {
               <Label className="text-sm font-medium">
                 Location <span className="text-red-500">*</span>
               </Label>
-              <div className="relative">
-                <MapPin className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  value={location}
-                  onChange={(e) => {
-                    setLocation(e.target.value);
-                    setLocationAutoFilled(false);
-                  }}
-                  placeholder="e.g. Building A, Room 101"
-                  className="pl-9 h-10"
-                />
-              </div>
-              {locationAutoFilled && selectedResource && (
-                <p className="text-xs text-emerald-600 flex items-center gap-1 pt-1">
-                  <Info className="h-3 w-3" />
-                  Auto-filled from selected resource. You can edit if needed.
-                </p>
+              {resourceType ? (
+                <>
+                  <Select
+                    value={locationChoice}
+                    onValueChange={handleLocationResourceChange}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select a location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select...</SelectItem>
+                      {filteredResources.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                          <span className="text-slate-400 ml-2 text-xs">
+                            {r.location}
+                          </span>
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="other">Other (type manually)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {filteredResources.length === 0 && locationChoice !== "other" && (
+                    <p className="text-xs text-amber-600 flex items-center gap-1 pt-1">
+                      <Info className="h-3 w-3" />
+                      No active resources of this type — choose "Other" to type a location.
+                    </p>
+                  )}
+                  {locationChoice === "other" && (
+                    <div className="relative pt-2">
+                      <MapPin className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 translate-y-0" />
+                      <Input
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="e.g. Building A, Room 101"
+                        className="pl-9 h-10"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                  {selectedResource && locationChoice !== "other" && (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1 pt-1">
+                      <MapPin className="h-3 w-3" />
+                      {selectedResource.location}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="relative">
+                  <MapPin className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g. Building A, Room 101"
+                    className="pl-9 h-10"
+                  />
+                  <p className="text-xs text-slate-500 pt-1">
+                    Tip: pick a Related Resource type above to choose from the list.
+                  </p>
+                </div>
               )}
             </div>
           </CardContent>
@@ -503,45 +603,113 @@ export default function TicketCreate() {
                   </span>
                 </Label>
                 <Input
+                  type="tel"
+                  inputMode="tel"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
+                  onBlur={(e) =>
+                    setContactPhone(normalizePhone(e.target.value.trim()))
+                  }
                   placeholder="+94 77 123 4567"
-                  className="h-10"
+                  aria-invalid={!!contactPhoneError}
+                  className={cn(
+                    "h-10",
+                    contactPhoneError &&
+                      "border-red-400 focus-visible:ring-red-400",
+                  )}
                 />
+                {contactPhoneError && (
+                  <p className="text-xs text-red-600 flex items-center gap-1 pt-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {contactPhoneError}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Footer actions */}
-        <div className="flex items-center justify-between gap-3 pb-8">
+        {/* Footer note */}
+        <div className="flex items-center gap-3 pb-4">
           <p className="text-xs text-slate-500 flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5" />
             Fields marked with <span className="text-red-500">*</span> are
             required.
           </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(-1)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md min-w-[160px]"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              {uploading ? "Uploading..." : "Submit Ticket"}
-            </Button>
-          </div>
+        </div>
+        </div>
+
+        {/* Right sidebar: Submit summary */}
+        <div className="lg:col-span-1">
+          <Card className="border border-slate-200 shadow-sm lg:sticky lg:top-6">
+            <CardHeader className="border-b bg-slate-50/60">
+              <CardTitle className="text-base font-semibold">
+                Submit Ticket
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-5 space-y-4">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Category</span>
+                  <span className="font-medium text-slate-800">
+                    {category || <span className="text-slate-400">—</span>}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Priority</span>
+                  {priority ? (
+                    <span className="flex items-center gap-1.5 font-medium text-slate-800">
+                      <span
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          priorityOptions.find((p) => p.value === priority)?.dot,
+                        )}
+                      />
+                      {priorityOptions.find((p) => p.value === priority)?.label}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-slate-500">Attachments</span>
+                  <span className="font-medium text-slate-800">
+                    {files.length}/3
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className={cn(
+                  "w-full text-white shadow-md transition-all",
+                  isFormValid && !isSubmitting
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                    : "bg-slate-300 text-slate-500 shadow-none cursor-not-allowed hover:bg-slate-300",
+                )}
+                disabled={isSubmitting || !isFormValid}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                {uploading ? "Uploading..." : "Submit Ticket"}
+              </Button>
+              <p className="text-xs text-slate-500 text-center">
+                Your ticket will be reviewed and assigned
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate(-1)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </form>
     </AppLayout>

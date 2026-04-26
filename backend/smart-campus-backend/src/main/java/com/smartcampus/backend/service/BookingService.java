@@ -14,6 +14,7 @@ import com.smartcampus.backend.repository.ResourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -30,6 +31,20 @@ public class BookingService {
             return bookingRepository.findAllByOrderByCreatedAtDesc();
         }
         return bookingRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId());
+    }
+
+    public List<Booking> getAllBookingsForAdmin() {
+        return bookingRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    public List<Booking> getApprovedBookingsForDate(String resourceId, LocalDate date, User currentUser) {
+        resourceRepository.findById(resourceId)
+            .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", resourceId));
+
+        // Return active bookings (PENDING + APPROVED) so the UI marks pending
+        // slots as unavailable. REJECTED/CANCELLED are excluded so those slots
+        // free up again automatically.
+        return bookingRepository.findActiveByResourceIdAndDate(resourceId, date);
     }
 
     public Booking getBookingById(String id, User currentUser) {
@@ -73,6 +88,7 @@ public class BookingService {
         Booking booking = Booking.builder()
             .userId(currentUser.getId())
             .userName(currentUser.getName())
+            .userRole(currentUser.getRole().name())
             .resourceId(resource.getId())
             .resourceName(resource.getName())
             .date(request.getDate())
@@ -83,7 +99,19 @@ public class BookingService {
             .status(BookingStatus.PENDING)
             .build();
 
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        notificationService.notifyAdminsExcept(
+            currentUser.getId(),
+            NotificationType.BOOKING,
+            "New Booking Request",
+            currentUser.getName() + " submitted a new booking request for "
+                + saved.getResourceName() + " on " + saved.getDate() + ".",
+            saved.getId(),
+            "/bookings/" + saved.getId()
+        );
+
+        return saved;
     }
 
     public Booking approveBooking(String bookingId, User admin) {
@@ -103,6 +131,16 @@ public class BookingService {
             NotificationType.BOOKING,
             "Booking Approved",
             "Your booking for " + booking.getResourceName() + " on " + booking.getDate() + " has been approved.",
+            booking.getId(),
+            "/bookings/" + booking.getId()
+        );
+
+        notificationService.notifyAdminsExcept(
+            admin.getId(),
+            NotificationType.BOOKING,
+            "Booking Approved",
+            admin.getName() + " approved booking for " + booking.getUserName()
+                + " (" + booking.getResourceName() + " on " + booking.getDate() + ").",
             booking.getId(),
             "/bookings/" + booking.getId()
         );
@@ -132,6 +170,16 @@ public class BookingService {
             "/bookings/" + booking.getId()
         );
 
+        notificationService.notifyAdminsExcept(
+            admin.getId(),
+            NotificationType.BOOKING,
+            "Booking Rejected",
+            admin.getName() + " rejected booking for " + booking.getUserName()
+                + " (" + booking.getResourceName() + " on " + booking.getDate() + ").",
+            booking.getId(),
+            "/bookings/" + booking.getId()
+        );
+
         return saved;
     }
 
@@ -150,6 +198,45 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        if (!currentUser.getId().equals(booking.getUserId())) {
+            notificationService.sendNotification(
+                booking.getUserId(),
+                NotificationType.BOOKING,
+                "Booking Cancelled",
+                "Your booking for " + booking.getResourceName() + " on " + booking.getDate() + " was cancelled by admin.",
+                booking.getId(),
+                "/bookings/" + booking.getId()
+            );
+        }
+
+        notificationService.notifyAdminsExcept(
+            currentUser.getId(),
+            NotificationType.BOOKING,
+            "Booking Cancelled",
+            currentUser.getName() + " cancelled booking for " + booking.getUserName()
+                + " (" + booking.getResourceName() + " on " + booking.getDate() + ").",
+            booking.getId(),
+            "/bookings/" + booking.getId()
+        );
+
+        return saved;
+    }
+
+    public void deleteCancelledBooking(String bookingId, User currentUser) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (booking.getStatus() != BookingStatus.CANCELLED) {
+            throw new IllegalArgumentException("Only cancelled bookings can be deleted");
+        }
+
+        if (currentUser.getRole().name().equals("ADMIN") ||
+            !booking.getUserId().equals(currentUser.getId())) {
+            throw new UnauthorizedException("You can only delete your own cancelled bookings");
+        }
+
+        bookingRepository.delete(booking);
     }
 }
