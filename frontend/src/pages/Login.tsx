@@ -19,6 +19,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   // Already logged in → go to dashboard
   if (isAuthenticated) {
@@ -42,13 +43,22 @@ export default function Login() {
     return "";
   };
 
+  const getPasswordValidationMessage = (value: string) => {
+    if (!value) {
+      return "Password is required.";
+    }
+    return "";
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const currentEmailError = getEmailValidationMessage(email);
+    const currentPasswordError = getPasswordValidationMessage(password);
     setEmailError(currentEmailError);
+    setPasswordError(currentPasswordError);
 
-    if (currentEmailError || !password) {
+    if (currentEmailError || currentPasswordError) {
       toast.error("Enter your email and password.");
       return;
     }
@@ -175,10 +185,17 @@ export default function Login() {
                   placeholder="••••••••"
                   className="pl-10 h-11"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPassword(value);
+                    setPasswordError(getPasswordValidationMessage(value));
+                  }}
+                  aria-invalid={!!passwordError}
                 />
               </div>
+              {passwordError && (
+                <p className="text-xs font-medium text-red-600">{passwordError}</p>
+              )}
             </div>
             <Button
               type="submit"
