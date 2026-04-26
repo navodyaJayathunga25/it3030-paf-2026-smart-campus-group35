@@ -18,6 +18,7 @@ export default function Login() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
 
   // Already logged in → go to dashboard
   if (isAuthenticated) {
@@ -30,9 +31,24 @@ export default function Login() {
     authService.loginWithGoogle();
   };
 
+  const getEmailValidationMessage = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "Email is required.";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return "Enter a valid email address.";
+    }
+    return "";
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) {
+
+    const currentEmailError = getEmailValidationMessage(email);
+    setEmailError(currentEmailError);
+
+    if (currentEmailError || !password) {
       toast.error("Enter your email and password.");
       return;
     }
@@ -116,7 +132,7 @@ export default function Login() {
           </div>
 
           {/* Email Form */}
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+          <form onSubmit={handleEmailLogin} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label
                 htmlFor="email"
@@ -132,10 +148,17 @@ export default function Login() {
                   placeholder="you@campus.edu"
                   className="pl-10 h-11"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEmail(value);
+                    setEmailError(getEmailValidationMessage(value));
+                  }}
+                  aria-invalid={!!emailError}
                 />
               </div>
+              {emailError && (
+                <p className="text-xs font-medium text-red-600">{emailError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label
